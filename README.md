@@ -1,2 +1,1 @@
-# n8n-flows-automations
-Fluxos n8n para prospecção, WhatsApp e cobranças (Pipedrive, Snov.io, Cora…)
+# Fluxos n8n para prospecção (OpenAI, Pipedrive, Google Sheets, Snov.io, Apyfy/linkedin)
