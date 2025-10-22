@@ -1,0 +1,609 @@
+{
+  "name": "Gerando a Thumb e a Descrição copy",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {}
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "1haBK38SqCyS93O7blr9aSHgwtUwTCv0E",
+          "mode": "list",
+          "cachedResultName": "Layla",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1haBK38SqCyS93O7blr9aSHgwtUwTCv0E"
+        },
+        "event": "fileUpdated",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        32,
+        128
+      ],
+      "id": "b6c338a5-ee31-4a26-b615-d5e0656fd77e",
+      "name": "Google Drive Trigger",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "9hNiSv0PZX7HS6JV",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        240,
+        128
+      ],
+      "id": "122fb566-5a3d-4528-acfe-6e1acc3dacdb",
+      "name": "Download file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "9hNiSv0PZX7HS6JV",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.cloudflare.com/client/v4/accounts/22d6540ba739728c764d2f2fdbee0d5d/ai/run/@cf/openai/whisper-large-v3-turbo",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"audio\": \"={{$json.audio}}\",\n  \"language\": \"pt\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        656,
+        128
+      ],
+      "id": "5e0d96a7-417f-40b8-b51a-18a2afec5e08",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "operation": "binaryToPropery",
+        "destinationKey": "audio",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        448,
+        128
+      ],
+      "id": "ca2c3691-2f72-4029-aed7-5c30ff82b641",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "dfd3643b-f633-461d-819b-bed8ee6d7d1a",
+              "name": "transcript",
+              "value": "={{$json.result.text || ($json.result.segments || []).map(s => s.text).join(' ')}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        880,
+        128
+      ],
+      "id": "e9233105-6512-443e-8c7a-882acbddd417",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4",
+          "mode": "list",
+          "cachedResultName": "GPT-4"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "Você é redator. Responda APENAS JSON com:\n{title, ytDescription, igCaption, tiktokCaption, hashtags[]} (sem # nos itens).",
+              "role": "system"
+            },
+            {
+              "content": "=Transcript: {{$json.transcript}}\nPúblico: brasileiros, tom direto."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        1088,
+        128
+      ],
+      "id": "77ade012-a43d-4887-b5d8-9b40c24b30cf",
+      "name": "Message a model",
+      "credentials": {
+        "openAiApi": {
+          "id": "pzPRokyHPpD8qyJ1",
+          "name": "OpenAi account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const out = JSON.parse($json.message.content);   // texto → JSON\nout.transcript = $node[\"Edit Fields\"].json.transcript;  // puxa do nó \"Edit Fields\"\nreturn [{ json: out }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1472,
+        128
+      ],
+      "id": "45ea0c84-d3e6-4949-aaf8-1641b51d9077",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "1krfSL8LGsWuVLT5ayGUt7pdvVNMmhlCP",
+          "mode": "list",
+          "cachedResultName": "Foto Murilo.png",
+          "cachedResultUrl": "https://drive.google.com/file/d/1krfSL8LGsWuVLT5ayGUt7pdvVNMmhlCP/view?usp=drivesdk"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1904,
+        128
+      ],
+      "id": "4f06dbaa-b8b3-492a-8075-b8cfc9ef2b18",
+      "name": "Baixando foto Murilo",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "9hNiSv0PZX7HS6JV",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2016,
+        352
+      ],
+      "id": "2d07a86c-65c6-4903-8554-1564b291cffd",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/images/edits",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "gpt-image-1"
+            },
+            {
+              "name": "prompt",
+              "value": "=Create a vertical thumbnail (9:16). Use the uploaded PNG of me as the central subject; PRESERVE my face and proportions. Cinematic, high-res, 3D depth. Dark background with soft side lighting and subtle back glow. Warm tones, stylized realism. Add minimal modern icons in the background related to: {{ $json.ytDescription }}; icons in soft gold/neon to match the title. \nTITLE (top, bold, uppercase, gold, max 4 words): \"{{ $json.title }}\".\nHigh contrast, mobile-legible, safe portrait cropping, no extra text.\n"
+            },
+            {
+              "name": "size",
+              "value": "1024x1536"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "image",
+              "inputDataFieldName": "data"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "mask",
+              "inputDataFieldName": "data"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2208,
+        352
+      ],
+      "id": "0ace9e16-42b3-4b3c-9f1f-a77cf57a602d",
+      "name": "Criando a Thumb"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "439172b3-cc65-4e8e-a4c6-ded926d060f2",
+              "name": "image_b64",
+              "value": "={{$json.data[0].b64_json}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2432,
+        352
+      ],
+      "id": "f02f3d64-4e1d-4b35-8495-9505f347bb24",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "operation": "toBinary",
+        "sourceProperty": "image_b64",
+        "binaryPropertyName": "thumb_vertical",
+        "options": {
+          "fileName": "={{$json.title || 'thumb'}}_vertical.png",
+          "mimeType": "image/png"
+        }
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        2640,
+        352
+      ],
+      "id": "66fd7e82-e18b-44cb-b0e0-7d571bf36a34",
+      "name": "Convert to File"
+    },
+    {
+      "parameters": {
+        "inputDataFieldName": "thumb_vertical",
+        "name": "={{$json.title || 'thumb'}}_vertical.png",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "12AiLtdPGtG0AALkiIQDCKpnFco0jdtqZ",
+          "mode": "list",
+          "cachedResultName": "Layla - thumb e descricao",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/12AiLtdPGtG0AALkiIQDCKpnFco0jdtqZ"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2848,
+        352
+      ],
+      "id": "fe96c7f6-c258-48c4-ab5e-5677d2bc8620",
+      "name": "Upload file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "9hNiSv0PZX7HS6JV",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c1c7dbdd-c457-405b-8689-2f2704bab68a",
+              "name": "desc_txt",
+              "value": "=Descricao:{{ $('Code').item.json.ytDescription }} Hashtags: {{ $('Code').item.json.hashtags }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3056,
+        352
+      ],
+      "id": "539fdbe8-28e9-4897-b233-6ba2089b03e6",
+      "name": "Edit Fields2"
+    },
+    {
+      "parameters": {
+        "operation": "toText",
+        "sourceProperty": "desc_txt",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        3264,
+        352
+      ],
+      "id": "77860ae1-982d-437e-8567-bb99db2f5ff1",
+      "name": "Convert to File1"
+    },
+    {
+      "parameters": {
+        "name": "={{$json.title || 'descricao'}}.txt",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "12AiLtdPGtG0AALkiIQDCKpnFco0jdtqZ",
+          "mode": "list",
+          "cachedResultName": "Layla - thumb e descricao",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/12AiLtdPGtG0AALkiIQDCKpnFco0jdtqZ"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        3472,
+        352
+      ],
+      "id": "e2cfd973-a64d-4db0-955e-ba6ebd23fd21",
+      "name": "Upload file1",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "9hNiSv0PZX7HS6JV",
+          "name": "Google Drive account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Drive Trigger": {
+      "main": [
+        [
+          {
+            "node": "Download file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download file": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Baixando foto Murilo",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Baixando foto Murilo": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Criando a Thumb",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Criando a Thumb": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Convert to File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File": {
+      "main": [
+        [
+          {
+            "node": "Upload file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload file": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields2": {
+      "main": [
+        [
+          {
+            "node": "Convert to File1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File1": {
+      "main": [
+        [
+          {
+            "node": "Upload file1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "5343da34-ec01-4f6a-996e-b4fef6ca5fea",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "98a7f76cbff973591af08e09b5be2fed14b55b37d878782c0638229a94477203"
+  },
+  "id": "j1v9rYOye30o2ToW",
+  "tags": [
+    {
+      "createdAt": "2025-09-06T18:55:27.059Z",
+      "updatedAt": "2025-09-06T18:55:27.059Z",
+      "id": "VKa8tOVcq5eDMJov",
+      "name": "layla"
+    }
+  ]
+}

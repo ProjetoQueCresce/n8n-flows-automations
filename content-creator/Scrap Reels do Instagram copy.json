@@ -1,0 +1,518 @@
+{
+  "name": "Scrap Reels do Instagram copy",
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.apify.com/v2/acts/xMc5Ga1oCONPmWJIa/run-sync-get-dataset-items",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"resultsLimit\": 1,\n  \"username\": [\n    \"nathanhodgson.ai\"\n  ]\n}",
+        "options": {
+          "redirect": {
+            "redirect": {}
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -336,
+        -144
+      ],
+      "id": "99eb1fb5-80dc-449d-bc26-c4092899f580",
+      "name": "Run Actor Synchronously"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        -144
+      ],
+      "id": "ee87a8e3-0b06-4c04-a32f-2e4f8467d056",
+      "name": "Limit"
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        1360,
+        -160
+      ],
+      "id": "20031e1d-df28-47b3-ac8b-d3c57f1ae58e",
+      "name": "OpenAI - Transcribe",
+      "credentials": {
+        "openAiApi": {
+          "id": "hp20YrXDC79bZv6x",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "documentId": {
+          "__rl": true,
+          "value": "1NC2f498uOCU-CSpHFkEgDLmtpOrZJF_2rhcynmjcj5E",
+          "mode": "list",
+          "cachedResultName": "Instagram Reel Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NC2f498uOCU-CSpHFkEgDLmtpOrZJF_2rhcynmjcj5E/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1489602453,
+          "mode": "list",
+          "cachedResultName": "Reels1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NC2f498uOCU-CSpHFkEgDLmtpOrZJF_2rhcynmjcj5E/edit#gid=1489602453"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "id",
+              "lookupValue": "={{ $json.id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        288,
+        -288
+      ],
+      "id": "2bd78752-565d-4719-bb81-c85cf38ee6bf",
+      "name": "Google Sheets - Search for entries",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleApi": {
+          "id": "WFfYbnxXdjAidNDj",
+          "name": "Google Sheets account - Service Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "fieldsToMatchString": "id",
+        "joinMode": "keepNonMatches",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.1,
+      "position": [
+        608,
+        -160
+      ],
+      "id": "1e6b383f-cdbc-4994-bdcb-f0de04cd06d6",
+      "name": "Merge - Drop Duplicates"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1NC2f498uOCU-CSpHFkEgDLmtpOrZJF_2rhcynmjcj5E",
+          "mode": "list",
+          "cachedResultName": "Instagram reel Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NC2f498uOCU-CSpHFkEgDLmtpOrZJF_2rhcynmjcj5E/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1489602453,
+          "mode": "list",
+          "cachedResultName": "Reels1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NC2f498uOCU-CSpHFkEgDLmtpOrZJF_2rhcynmjcj5E/edit#gid=1489602453"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.id }}",
+            "url": "={{ $json.url }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "url",
+              "displayName": "url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "scrapedTranscript",
+              "displayName": "scrapedTranscript",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "links",
+              "displayName": "links",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        864,
+        -160
+      ],
+      "id": "5d5a7f15-efd7-4a93-9c1c-138079d7324a",
+      "name": "Google Sheets - Add entries",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Xs8Bc8KKbYBkELt6",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Limit').item.json.videoUrl }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1088,
+        -160
+      ],
+      "id": "b0417880-eb0d-4826-8681-0ae3feb4fe1d",
+      "name": "Download Video",
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "GPT-4O"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "Você é um otimo escritor de conteúdos adptados para as redes sociais",
+              "role": "system"
+            },
+            {
+              "content": "=traduza para português de uma maneira usual deixando as partes que fazem sentido em inglês, por exemplo nomes de ferramentas ou termos que mesmo em português é mais comum a pronuncia em ingles: {{ $json.text }}. Sempre coloque na introdução do vídeo, mas não sendo a primeira frase, tem quer ser uma chamada para dispertar a curiosidade nas pessoas sobre o assunto e depois pedir para me seguir.\n\nEx: você sabia que vazaram mais de mil prompts do cursor, já me siga para não perder nenhum conteúdo sobre ia, (ai começa o conteúdo principal)\n\nNAO É PARA COLOCAR A INTRODUÇÃO SEPARADO DO CONTEÚDO PRINCIPAL"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        1664,
+        -160
+      ],
+      "id": "46fd66d0-437c-499f-aa2e-3fde6fe863d7",
+      "name": "OpenAI - Filter content & generate suggestions1",
+      "credentials": {
+        "openAiApi": {
+          "id": "hp20YrXDC79bZv6x",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1NC2f498uOCU-CSpHFkEgDLmtpOrZJF_2rhcynmjcj5E",
+          "mode": "list",
+          "cachedResultName": "Murilo - Instagram Reel Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NC2f498uOCU-CSpHFkEgDLmtpOrZJF_2rhcynmjcj5E/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1489602453,
+          "mode": "list",
+          "cachedResultName": "Reels1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NC2f498uOCU-CSpHFkEgDLmtpOrZJF_2rhcynmjcj5E/edit#gid=1489602453"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('Limit').item.json.id }}",
+            "scrapedTranscript": "={{ $json.message.content.texto }}{{ $json.message.content.translation }}{{ $json.message.content.texto_traduzido }}{{ $json.message.content['tradução'] }}{{ $json.message.content.text }}{{ $json.message.content.message }}{{ $json.message.content.translatedText }}{{ $json.message.content.mensagem }}{{ $json.message.content.json.message.content.texto}}{{ $json.message.content['conteúdo'] }}{{ $json.message.content.content }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "url",
+              "displayName": "url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "scrapedTranscript",
+              "displayName": "scrapedTranscript",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "links",
+              "displayName": "links",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        2128,
+        -160
+      ],
+      "id": "f02b06a5-3e24-4dbd-aec6-141cea91783f",
+      "name": "Google Sheets - Add scrapedTranscript2",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Xs8Bc8KKbYBkELt6",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -608,
+        -144
+      ],
+      "id": "83113ae1-1595-40ad-a42e-4ad6b4b3f44e",
+      "name": "Schedule Trigger"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Run Actor Synchronously": {
+      "main": [
+        [
+          {
+            "node": "Limit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets - Search for entries",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge - Drop Duplicates",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "OpenAI - Transcribe": {
+      "main": [
+        [
+          {
+            "node": "OpenAI - Filter content & generate suggestions1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets - Search for entries": {
+      "main": [
+        [
+          {
+            "node": "Merge - Drop Duplicates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge - Drop Duplicates": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets - Add entries",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets - Add entries": {
+      "main": [
+        [
+          {
+            "node": "Download Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Video": {
+      "main": [
+        [
+          {
+            "node": "OpenAI - Transcribe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI - Filter content & generate suggestions1": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets - Add scrapedTranscript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Run Actor Synchronously",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "cb8343d5-266b-494c-a919-e5c0ade1008e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "98a7f76cbff973591af08e09b5be2fed14b55b37d878782c0638229a94477203"
+  },
+  "id": "EeFLnjkIks5SrPpT",
+  "tags": [
+    {
+      "createdAt": "2025-07-08T13:38:22.970Z",
+      "updatedAt": "2025-07-08T13:38:22.970Z",
+      "id": "bvXC4dHy3o4IThIF",
+      "name": "Instagram Parasite Syste"
+    }
+  ]
+}

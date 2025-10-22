@@ -1,0 +1,1009 @@
+{
+  "name": "Agente de publicação copy",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "14hFFMLobc3HTGi7c07lkgh9QfxPPd6UH",
+          "mode": "list",
+          "cachedResultName": "Layla - postagem",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/14hFFMLobc3HTGi7c07lkgh9QfxPPd6UH"
+        },
+        "event": "folderCreated"
+      },
+      "id": "c0e90e7c-9f82-4c1f-b920-eaaf360d6456",
+      "name": "Drive Trigger: Nova subpasta",
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1712,
+        304
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "9hNiSv0PZX7HS6JV",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "searchMethod": "query",
+        "queryString": "='{{$json.id}}' in parents and trashed=false\n",
+        "returnAll": true,
+        "filter": {},
+        "options": {
+          "fields": [
+            "*"
+          ]
+        }
+      },
+      "id": "f4a3dff2-0a51-46d7-af33-273a2976359c",
+      "name": "Drive: Buscar arquivos da subpasta",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -1456,
+        304
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "9hNiSv0PZX7HS6JV",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "65ca2a59-40af-484e-841b-1afa54d604d8",
+              "leftValue": "={{ $json.mimeType }}",
+              "rightValue": "=video/",
+              "operator": {
+                "type": "string",
+                "operation": "startsWith"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "7211c66e-535c-4651-9222-186fc557a69f",
+      "name": "Filtro: Vídeo (mime video/*)",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [
+        -1200,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "03421797-78fc-4d52-9da0-0fac9af94116",
+              "leftValue": "={{ $json.mimeType }}",
+              "rightValue": "image/",
+              "operator": {
+                "type": "string",
+                "operation": "startsWith"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "279c8160-13a6-4a95-b7ba-9c1d3bdaf61c",
+      "name": "Filtro: Thumb (mime image/*)",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [
+        -1200,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "d207f3e3-e3c5-4469-8f3b-bb12a622b251",
+              "leftValue": "={{ $json.mimeType }}",
+              "rightValue": "text/plain",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "69941285-8791-480f-8508-6e1ce1600e5a",
+      "name": "Filtro: Caption (.txt)",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [
+        -1200,
+        448
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": "={{ $json.id }}",
+        "options": {
+          "binaryPropertyName": "video"
+        }
+      },
+      "id": "06db9c45-4912-4e94-b09c-8f8c2be05f58",
+      "name": "Drive: Download Vídeo → binary.video",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -960,
+        160
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "9hNiSv0PZX7HS6JV",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": "={{ $json.id }}",
+        "options": {
+          "binaryPropertyName": "thumb"
+        }
+      },
+      "id": "7c9aa7b6-10e2-428b-b9e3-b03eed6dbf26",
+      "name": "Drive: Download Thumb → binary.thumb",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -960,
+        304
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "9hNiSv0PZX7HS6JV",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": "={{ $json.id }}",
+        "options": {
+          "binaryPropertyName": "data"
+        }
+      },
+      "id": "df6cbb77-fe6b-4f6b-ace0-d273f9bbd6ee",
+      "name": "Drive: Download TXT → binary.data",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -960,
+        448
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "9hNiSv0PZX7HS6JV",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "text",
+        "destinationKey": "caption",
+        "options": {}
+      },
+      "id": "d36d331e-cd72-4afe-906c-6578e8a7c56c",
+      "name": "Extract From File: TXT → caption",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        -736,
+        448
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "id": "213fe713-8346-4c0f-8587-8f7e892d1305",
+      "name": "Merge: Vídeo + Caption",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        -544,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "id": "3d46ade0-b5fa-4908-ae82-daea2979362a",
+      "name": "Merge: + Thumb",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        -368,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "caption",
+              "type": "string",
+              "value": "=={{ $json.caption || $json.data }}\n"
+            },
+            {
+              "id": "a2",
+              "name": "fileName",
+              "type": "string",
+              "value": "=={{ $binary.video?.fileName || 'video.mp4' }}"
+            },
+            {
+              "id": "a3",
+              "name": "meta.folderId",
+              "type": "string",
+              "value": "=={{ $node[\"Drive Trigger: Nova subpasta\"].json.id }}"
+            },
+            {
+              "id": "eb6bc614-b94e-4151-bddc-153c1fc437ab",
+              "name": "meta.folderName",
+              "value": "=={{ $node[\"Drive Trigger: Nova subpasta\"].json.name }}",
+              "type": "string"
+            },
+            {
+              "id": "44bca692-151d-4ae5-ab54-440c2b03dbca",
+              "name": "videoField",
+              "value": "video",
+              "type": "string"
+            },
+            {
+              "id": "5063fad9-4ff7-4edb-8d9a-2ce509d8d513",
+              "name": "thumbField",
+              "value": "thumb",
+              "type": "string"
+            },
+            {
+              "id": "d8e8d942-61ae-4493-9396-6885b1dee041",
+              "name": "thumbName",
+              "value": "={{$binary.thumb?.fileName}}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "b9937f3d-7be6-45d9-a56f-dbf2aa524ba9",
+      "name": "Set: Pacote final (mantém binários)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -176,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "video",
+        "operation": "upload",
+        "title": "={{ $json.title && $json.title.trim() !== '' ? $json.title : '•' }}\n",
+        "regionCode": "BR",
+        "categoryId": "27",
+        "binaryProperty": "video",
+        "options": {
+          "description": "={{'•'}}",
+          "privacyStatus": "public",
+          "selfDeclaredMadeForKids": false
+        }
+      },
+      "type": "n8n-nodes-base.youTube",
+      "typeVersion": 1,
+      "position": [
+        64,
+        160
+      ],
+      "id": "3fcf799d-bc46-4d2e-a26a-6d3dc773f78d",
+      "name": "Upload a video",
+      "credentials": {
+        "youTubeOAuth2Api": {
+          "id": "nr6LjNPaNUPVQQOo",
+          "name": "YouTube Murilo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Pega o item atual mantendo tudo\nconst item = $input.item;\n\n// 1) Calcula total_bytes a partir do base64 do binário\nconst b64 = item.binary?.video?.data || '';\nconst totalBytes = Buffer.from(b64, 'base64').length;\n\n// 2) Escreve no JSON (preservando o que já existia)\nitem.json = {\n  ...item.json,\n  total_bytes: totalBytes,\n  media_type: 'video/mp4',\n};\n\n// 3) Normaliza metadados do binário (sem reencodar)\nif (item.binary?.video) {\n  // MIME esperado pelo X\n  item.binary.video.mimeType = 'video/mp4';\n  // Troca a extensão só no nome do arquivo\n  const name = item.binary.video.fileName || 'video.mov';\n  item.binary.video.fileName = name.replace(/\\.[^.]+$/, '.mp4');\n}\n\n// 4) Devolve o item COMPLETO (json + binary)\nreturn item;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        64,
+        352
+      ],
+      "id": "e378c447-ee12-4df1-8470-8640bcfcd887",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Pega o media_id do INIT (nó: \"HTTP Request\")\nconst init = $items('HTTP INIT', 0, 0)[0].json;\nconst mediaId = init.media_id_string || init.media_id;\nif (!mediaId) throw new Error('Sem media_id do INIT');\n\n// Pega o binário do vídeo do nó \"Code in JavaScript\"\nconst src = $items('Code in JavaScript', 0, 0)[0];\nconst b64 = src.binary?.video?.data;\nif (!b64) throw new Error('Sem binary.video');\n\n// Quebra em chunks de 5MB\nconst buf = Buffer.from(b64, 'base64');\nconst CHUNK = 5 * 1024 * 1024;\nconst out = [];\nlet i = 0;\n\nfor (let off = 0; off < buf.length; off += CHUNK) {\n  const slice = buf.subarray(off, Math.min(off + CHUNK, buf.length));\n  out.push({\n    json: { segment_index: i, media_id_string: mediaId },\n    binary: {\n      chunk: {\n        data: slice.toString('base64'),\n        fileName: `part-${i}.mp4`,\n        mimeType: 'video/mp4',\n      },\n    },\n  });\n  i++;\n}\n\nreturn out;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        352
+      ],
+      "id": "55db35ed-7d41-46c3-98c5-7c57f604ab76",
+      "name": "Fn: Chunks 5MB"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://upload.twitter.com/1.1/media/upload.json",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth1Api",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "command",
+              "value": "APPEND"
+            },
+            {
+              "name": "media_id",
+              "value": "={{ $json.media_id_string }}"
+            },
+            {
+              "name": "segment_index",
+              "value": "={{ $json.segment_index }}"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "media",
+              "inputDataFieldName": "chunk"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        656,
+        352
+      ],
+      "id": "6c35720a-496c-4c18-9c15-0cd2a8392be7",
+      "name": "HTTP: X APPEND",
+      "credentials": {
+        "oAuth1Api": {
+          "id": "VatjMuhlfq3LQNDT",
+          "name": "X OAuth1 (Murilo)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://upload.twitter.com/1.1/media/upload.json",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth1Api",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "command",
+              "value": "FINALIZE"
+            },
+            {
+              "name": "media_id",
+              "value": "={{ $items('HTTP INIT', 0, 0)[0].json.media_id_string }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        864,
+        352
+      ],
+      "id": "d3d409bb-ee77-430b-a4b7-5a49bb2db478",
+      "name": "X FINALIZE",
+      "credentials": {
+        "oAuth1Api": {
+          "id": "VatjMuhlfq3LQNDT",
+          "name": "X OAuth1 (Murilo)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a6ecdc76-aa0e-44c5-b400-ceb5a50ebc40",
+              "leftValue": "={{ $json.processing_info?.state !== 'succeeded' && $json.processing_info?.state !== 'failed' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1280,
+        352
+      ],
+      "id": "a4712cc9-1958-462e-8033-6823373ae743",
+      "name": "If"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1632,
+        512
+      ],
+      "id": "013f297a-9cc9-4454-985e-760a95dac8de",
+      "name": "Wait",
+      "webhookId": "c37f6dee-980a-4f32-a8b5-bb4c8ffa8a20"
+    },
+    {
+      "parameters": {
+        "url": "https://upload.twitter.com/1.1/media/upload.json",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth1Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "command",
+              "value": "STATUS"
+            },
+            {
+              "name": "media_id",
+              "value": "={{ $items('HTTP INIT', 0, 0)[0].json.media_id_string }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1072,
+        352
+      ],
+      "id": "d55f3f69-fc76-41a4-a884-5ed52cd6195f",
+      "name": "X STATUS",
+      "credentials": {
+        "oAuth1Api": {
+          "id": "VatjMuhlfq3LQNDT",
+          "name": "X OAuth1 (Murilo)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.twitter.com/2/tweets",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth1Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"text\": \"Entre na minha comunidade gratuita no whatsapp para aprender automações com n8n https://chat.whatsapp.com/D8izJPdYsel3Mln9xAB6Zs?mode=ems_copy_t\",\n  \"media\": {\n    \"media_ids\": [\n      \"{{ $json.media_id_string ?? String($json.media_id) }}\"\n    ]\n  }\n}\n",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 120000
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1904,
+        368
+      ],
+      "id": "e5633a22-029e-4e41-b0f7-a9d05c754a8f",
+      "name": "X TWEET",
+      "alwaysOutputData": true,
+      "credentials": {
+        "oAuth1Api": {
+          "id": "VatjMuhlfq3LQNDT",
+          "name": "X OAuth1 (Murilo)"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://upload.twitter.com/1.1/media/upload.json",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth1Api",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "command",
+              "value": "INIT"
+            },
+            {
+              "name": "media_type",
+              "value": "=video/mp4"
+            },
+            {
+              "name": "media_category",
+              "value": "tweet_video"
+            },
+            {
+              "name": "total_bytes",
+              "value": "={{$json.total_bytes}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        352
+      ],
+      "id": "af1ed7ed-e017-4985-91cb-a4f9d9e0ff9f",
+      "name": "HTTP INIT",
+      "credentials": {
+        "oAuth1Api": {
+          "id": "VatjMuhlfq3LQNDT",
+          "name": "X OAuth1 (Murilo)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// pega o item 0 do INIT (nó chamado exatamente \"HTTP INIT\")\nconst init = $items('HTTP INIT', 0, 0)[0];\nreturn [init]; // n8n espera um array de itens"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        368
+      ],
+      "id": "e4f752de-826c-42e8-81c1-b20349e7eb37",
+      "name": "Pick one"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a3026de8-2079-4d5a-ae5e-6b6f4f8709a1",
+              "leftValue": "={{ $json.statusCode === 429 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2112,
+        384
+      ],
+      "id": "1b96b0d8-73ef-4f9e-b52f-41812a12ea32",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "amount": "={{ Math.max(60, Math.ceil((($json.headers?.['x-rate-limit-reset'] || 0)*1000 - Date.now())/1000)) }}s"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2272,
+        496
+      ],
+      "id": "3a65d9fe-97f2-4493-ac81-2b1660f747aa",
+      "name": "Wait1",
+      "webhookId": "634fda6c-5afd-4ab1-af11-dbf2efd420c7"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Drive Trigger: Nova subpasta": {
+      "main": [
+        [
+          {
+            "node": "Drive: Buscar arquivos da subpasta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Drive: Buscar arquivos da subpasta": {
+      "main": [
+        [
+          {
+            "node": "Filtro: Vídeo (mime video/*)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Filtro: Thumb (mime image/*)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Filtro: Caption (.txt)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtro: Vídeo (mime video/*)": {
+      "main": [
+        [
+          {
+            "node": "Drive: Download Vídeo → binary.video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtro: Thumb (mime image/*)": {
+      "main": [
+        [
+          {
+            "node": "Drive: Download Thumb → binary.thumb",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtro: Caption (.txt)": {
+      "main": [
+        [
+          {
+            "node": "Drive: Download TXT → binary.data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Drive: Download TXT → binary.data": {
+      "main": [
+        [
+          {
+            "node": "Extract From File: TXT → caption",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Drive: Download Vídeo → binary.video": {
+      "main": [
+        [
+          {
+            "node": "Merge: Vídeo + Caption",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract From File: TXT → caption": {
+      "main": [
+        [
+          {
+            "node": "Merge: Vídeo + Caption",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Drive: Download Thumb → binary.thumb": {
+      "main": [
+        [
+          {
+            "node": "Merge: + Thumb",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge: Vídeo + Caption": {
+      "main": [
+        [
+          {
+            "node": "Merge: + Thumb",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge: + Thumb": {
+      "main": [
+        [
+          {
+            "node": "Set: Pacote final (mantém binários)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set: Pacote final (mantém binários)": {
+      "main": [
+        [
+          {
+            "node": "Upload a video",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "HTTP INIT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fn: Chunks 5MB": {
+      "main": [
+        [
+          {
+            "node": "HTTP: X APPEND",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP: X APPEND": {
+      "main": [
+        [
+          {
+            "node": "X FINALIZE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "X FINALIZE": {
+      "main": [
+        [
+          {
+            "node": "X STATUS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Pick one",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "X STATUS": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "X STATUS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP INIT": {
+      "main": [
+        [
+          {
+            "node": "Fn: Chunks 5MB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pick one": {
+      "main": [
+        [
+          {
+            "node": "X TWEET",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "X TWEET": {
+      "main": [
+        [],
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Wait1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait1": {
+      "main": [
+        [
+          {
+            "node": "X TWEET",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "b1c382bf-74ec-45cd-a4bd-bac72e93b42a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "98a7f76cbff973591af08e09b5be2fed14b55b37d878782c0638229a94477203"
+  },
+  "id": "ET5cURIH07iplQNH",
+  "tags": [
+    {
+      "createdAt": "2025-09-06T18:55:27.059Z",
+      "updatedAt": "2025-09-06T18:55:27.059Z",
+      "id": "VKa8tOVcq5eDMJov",
+      "name": "layla"
+    }
+  ]
+}
