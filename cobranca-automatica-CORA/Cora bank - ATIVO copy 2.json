@@ -1,0 +1,3334 @@
+{
+  "name": "Cora bank - ATIVO copy 2",
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://matls-clients.api.cora.com.br/token",
+        "provideSslCertificates": true,
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "grant_type",
+              "value": "client_credentials"
+            },
+            {
+              "name": "client_id"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1776,
+        -144
+      ],
+      "id": "f4ad8651-1c00-4e97-8002-0a540a09870f",
+      "name": "Cora – Get Token1",
+      "credentials": {
+        "httpSslAuth": {
+          "id": "p70SduX5I98NHghf",
+          "name": "SSL Certificates account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://matls-clients.api.cora.com.br/v2/invoices/{{ $json.id }}",
+        "provideSslCertificates": true,
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "accept",
+              "value": "application/json"
+            },
+            {
+              "name": "authorization",
+              "value": "=Bearer {{ $('Cora – Get Token1').item.json.access_token }}"
+            }
+          ]
+        },
+        "options": {
+          "allowUnauthorizedCerts": false
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2592,
+        -144
+      ],
+      "id": "650c0b65-09d0-4016-aeab-f16d9d02ace1",
+      "name": "Cora – Consultar Detalhes boletos Boletos2",
+      "credentials": {
+        "httpSslAuth": {
+          "id": "p70SduX5I98NHghf",
+          "name": "SSL Certificates account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://matls-clients.api.cora.com.br/v2/invoices",
+        "provideSslCertificates": true,
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "accept",
+              "value": "application/json"
+            },
+            {
+              "name": "authorization",
+              "value": "=Bearer {{ $json.access_token }}"
+            }
+          ]
+        },
+        "options": {
+          "allowUnauthorizedCerts": false
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1984,
+        -144
+      ],
+      "id": "3af03479-428f-478a-9de4-6f5c16317ab1",
+      "name": "Cora – Consultar Boletos1",
+      "credentials": {
+        "httpSslAuth": {
+          "id": "p70SduX5I98NHghf",
+          "name": "SSL Certificates account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// pega o campo que é uma string JSON\nconst raw = items[0]?.json?.concatenated_items;\nif (!raw) {\n  throw new Error('Não encontrei concatenated_items em items[0].json');\n}\n\nlet invoices;\ntry {\n  invoices = JSON.parse(raw);\n} catch (e) {\n  throw new Error('Falha ao dar parse em concatenated_items: ' + e.message);\n}\n\n// extrai os ids válidos\nconst ids = invoices\n  .map(inv => inv.id)\n  .filter(id => typeof id === 'string' && id.trim() !== '');\n\n// devolve um item por id\nreturn ids.map(id => ({ json: { id } }));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2368,
+        -144
+      ],
+      "id": "f162fd91-fb0c-4e0b-b673-b419db25edda",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "fieldsToSummarize": {
+          "values": [
+            {
+              "aggregation": "concatenate",
+              "field": "items",
+              "separateBy": "\n"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.summarize",
+      "typeVersion": 1.1,
+      "position": [
+        2176,
+        -144
+      ],
+      "id": "28a2ed8f-ab14-4c27-b224-c73f56d9c113",
+      "name": "Summarize"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.status }}",
+                    "rightValue": "OPEN",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "c9ddb115-bfe1-48c5-aa51-72dd6e22cbce"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Em aberto"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "6dadd986-2395-424f-807f-625d9fe07359",
+                    "leftValue": "={{ $json.status }}",
+                    "rightValue": "LATE",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Atrasado"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        2768,
+        -144
+      ],
+      "id": "19d6f4fb-7e37-47ba-9b77-2aab34bbed9a",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "a952e3c6-2c1b-4365-b076-0299830f0c55",
+                    "leftValue": "={{ $json['Dias vencidos'] }}",
+                    "rightValue": 1,
+                    "operator": {
+                      "type": "number",
+                      "operation": "gt"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Vencido +1 D"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "e2b2824e-fd3d-42e3-9b63-75630d4be8bb",
+                    "leftValue": "={{ $json['Dias vencidos'] }}",
+                    "rightValue": 1,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Vencido +2D"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        3568,
+        208
+      ],
+      "id": "c7b0b762-d09f-4774-8eb9-183089b7354c",
+      "name": "Vence hoje"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        4352,
+        -1376
+      ],
+      "id": "ee42c33a-71cc-49db-99ba-3af7f2e0f60e",
+      "name": "No Operation, do nothing"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "57788f0a-6923-4467-a981-04eb2a2d0875",
+              "name": "dias_para_vencimento",
+              "value": "={{ (() => {\n  const [ano, mes, dia] = $json.payment_terms.due_date.split('-').map(Number);\n  const vencUTC = Date.UTC(ano, mes - 1, dia);\n  const hoje = new Date();\n  const hojeUTC = Date.UTC(hoje.getUTCFullYear(), hoje.getUTCMonth(), hoje.getUTCDate());\n  return Math.floor((vencUTC - hojeUTC) / (1000 * 60 * 60 * 24)); // inteiro, positivo = dias faltando\n})() }}\n",
+              "type": "number"
+            },
+            {
+              "id": "00f69c0f-a93d-40f5-b8bf-c496d291de51",
+              "name": "Nome",
+              "value": "={{ $json.customer.name }}",
+              "type": "string"
+            },
+            {
+              "id": "3ebaedad-9083-4a1c-b29f-12b1cc0aa331",
+              "name": "Boleto",
+              "value": "={{ $json.payment_options.bank_slip.url }}",
+              "type": "string"
+            },
+            {
+              "id": "ee86712f-34ee-4716-b98f-1efcf2e3d0a7",
+              "name": "WhasApp",
+              "value": "={{ $json.customer.telephone }}",
+              "type": "string"
+            },
+            {
+              "id": "3badc5c5-a861-4915-bc0c-cd9f143c6c35",
+              "name": "Data de vencimento",
+              "value": "={{ $json.payment_terms.due_date }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3216,
+        -480
+      ],
+      "id": "b29b0147-b09b-467e-abc4-c8faf1a60649",
+      "name": "Dias para vencer"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "305715a1-bc41-4a02-ab11-3bbb312f2c84",
+                    "leftValue": "={{ $json.dias_para_vencimento }}",
+                    "rightValue": 5,
+                    "operator": {
+                      "type": "number",
+                      "operation": "gt"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Falta mais de 5 dias"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "e87ae481-bd7f-4af5-9cec-e0b98c1c79fa",
+                    "leftValue": "={{ $json.dias_para_vencimento }}",
+                    "rightValue": 5,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Vence em 5 dias"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "5f3d0767-599b-4582-b0bc-9c8e34db01ce",
+                    "leftValue": "={{ $json.dias_para_vencimento }}",
+                    "rightValue": 4,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Vence em 4 dias"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "73fd9b36-1aa6-4553-8fe6-88e348d3babf",
+                    "leftValue": "={{ $json.dias_para_vencimento }}",
+                    "rightValue": 3,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Vence em 3 dias"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "50964ec9-57ed-4785-8c38-18b7f9196103",
+                    "leftValue": "={{ $json.dias_para_vencimento }}",
+                    "rightValue": 2,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Vence em 2 dias"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "8986622d-ae61-4a56-bce9-2b16b7a0693e",
+                    "leftValue": "={{ $json.dias_para_vencimento }}",
+                    "rightValue": 1,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Vence amanhã"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "d911795d-d21d-4144-aa7f-25399e1d4df9",
+                    "leftValue": "={{ $json.dias_para_vencimento }}",
+                    "rightValue": 0,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Vence hoje"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        3552,
+        -720
+      ],
+      "id": "b8d176fb-6d75-4994-a61f-392f7bb15733",
+      "name": "dias_para_vencimento"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "087cc725-84a8-4a47-826c-3c129b01bbc5",
+              "name": "To WhatsApp",
+              "value": "={{ $json.customer.telephone }}",
+              "type": "string"
+            },
+            {
+              "id": "3060e418-7318-4c24-bb25-e75569f8bb6d",
+              "name": "To E-mail",
+              "value": "={{ $json.customer.email }}",
+              "type": "string"
+            },
+            {
+              "id": "e3d5421d-6905-4647-8e92-44e77078c8b1",
+              "name": "message",
+              "value": "=Olá, {{ $json.Nome }}. Tudo bem? Sua cobrança da Work Company vence daqui {{ $json.dias_para_vencimento }} dias ({{ $json['Data de vencimento'] }}). Segue o link do boleto para fazer o pagamento: {{ $json.Boleto }}\n\nObrigado.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        4080,
+        -1376
+      ],
+      "id": "e567ab75-5070-4135-b115-5e7ba536fbfa",
+      "name": "Edit Fields3"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "57788f0a-6923-4467-a981-04eb2a2d0875",
+              "name": "Dias vencidos",
+              "value": "={{ (() => {\n  const [ano, mes, dia] = $json.payment_terms.due_date.split('-').map(Number);\n  const vencUTC = Date.UTC(ano, mes - 1, dia);\n  const hoje = new Date();\n  const hojeUTC = Date.UTC(hoje.getUTCFullYear(), hoje.getUTCMonth(), hoje.getUTCDate());\n  return Math.floor((hojeUTC - vencUTC) / (1000 * 60 * 60 * 24)); // inteiro, positivo = atraso\n})() }}\n",
+              "type": "number"
+            },
+            {
+              "id": "00f69c0f-a93d-40f5-b8bf-c496d291de51",
+              "name": "Nome",
+              "value": "={{ $json.customer.name }}",
+              "type": "string"
+            },
+            {
+              "id": "3ebaedad-9083-4a1c-b29f-12b1cc0aa331",
+              "name": "Boleto",
+              "value": "={{ $json.payment_options.bank_slip.url }}",
+              "type": "string"
+            },
+            {
+              "id": "ee86712f-34ee-4716-b98f-1efcf2e3d0a7",
+              "name": "WhasApp",
+              "value": "={{ $json.customer.telephone }}",
+              "type": "string"
+            },
+            {
+              "id": "3badc5c5-a861-4915-bc0c-cd9f143c6c35",
+              "name": "Data de vencimento",
+              "value": "={{ $json.payment_terms.due_date }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3216,
+        208
+      ],
+      "id": "388c9b0b-33e4-42a6-90f2-c3fd5e29ce7d",
+      "name": "Dias para vencer1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "087cc725-84a8-4a47-826c-3c129b01bbc5",
+              "name": "To WhatsApp",
+              "value": "={{ $json.Telefone }}",
+              "type": "string"
+            },
+            {
+              "id": "3060e418-7318-4c24-bb25-e75569f8bb6d",
+              "name": "To E-mail",
+              "value": "={{ $json['E-mail'] }}",
+              "type": "string"
+            },
+            {
+              "id": "e3d5421d-6905-4647-8e92-44e77078c8b1",
+              "name": "message",
+              "value": "=Olá, {{ $json.Nome }}. Tudo bem? Sua cobrança da Work Company venceu ontem ({{ $json['Dia de vencimento'] }}). Segueo boleto para fazer o pagamento, Obrigado.",
+              "type": "string"
+            },
+            {
+              "id": "6f0a36ff-89cf-4e0d-a7a7-c13d2ee89b3e",
+              "name": "Boleto",
+              "value": "={{ $json['Url Boleto'] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        4432,
+        192
+      ],
+      "id": "cc818c84-7f93-42a3-9158-bddcecc61677",
+      "name": "Vencido a 1 dia"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        4784,
+        192
+      ],
+      "id": "cb9a999a-b49a-4d82-abd0-866e7a1b1f2a",
+      "name": "Loop Over Items1"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        4720,
+        -1232
+      ],
+      "id": "bccab3de-2f25-4842-9ad5-a6295483c090",
+      "name": "Loop Over Items3"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://worke.uazapi.com/send/media",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "token"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ $json['To WhatsApp'] }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.message }}"
+            },
+            {
+              "name": "type",
+              "value": "document"
+            },
+            {
+              "name": "docName",
+              "value": "Boleto Work Company.pdf"
+            },
+            {
+              "name": "file",
+              "value": "={{ $json.Boleto }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5008,
+        -1216
+      ],
+      "id": "9fcc328b-c6ea-4dab-965f-9c063413dc92",
+      "name": "Enviando mensagem e PDF"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://worke.uazapi.com/send/media",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "token",
+              "value": "ca8b9f3f-8df0-44ad-967c-87533878c41d"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ $json['To WhatsApp'] }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.message }}"
+            },
+            {
+              "name": "type",
+              "value": "document"
+            },
+            {
+              "name": "docName",
+              "value": "Boleto Work Company.pdf"
+            },
+            {
+              "name": "file",
+              "value": "={{ $json.Boleto }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5088,
+        208
+      ],
+      "id": "7d5c987b-5c80-40ef-a223-3ce75193040e",
+      "name": "Enviando mensagem e PDF2"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1zJlt8gIi4Synj7kwTTdoPn7yiYBRVGDQ_MKlsPoKLng",
+          "mode": "list",
+          "cachedResultName": "Contatos clientes",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1zJlt8gIi4Synj7kwTTdoPn7yiYBRVGDQ_MKlsPoKLng/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Página1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1zJlt8gIi4Synj7kwTTdoPn7yiYBRVGDQ_MKlsPoKLng/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Empresa",
+              "lookupValue": "={{ $json.Empresa }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        4272,
+        -1232
+      ],
+      "id": "af33d011-dc2c-4a18-8b19-339f20ba29e4",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Xs8Bc8KKbYBkELt6",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1zJlt8gIi4Synj7kwTTdoPn7yiYBRVGDQ_MKlsPoKLng",
+          "mode": "list",
+          "cachedResultName": "Contatos clientes",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1zJlt8gIi4Synj7kwTTdoPn7yiYBRVGDQ_MKlsPoKLng/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Página1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1zJlt8gIi4Synj7kwTTdoPn7yiYBRVGDQ_MKlsPoKLng/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Empresa",
+              "lookupValue": "={{ $json.Empresa }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        4208,
+        192
+      ],
+      "id": "fc178995-ad2d-497f-9008-6f75fc6d449d",
+      "name": "Get row(s) in sheet2",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Xs8Bc8KKbYBkELt6",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1zJlt8gIi4Synj7kwTTdoPn7yiYBRVGDQ_MKlsPoKLng",
+          "mode": "list",
+          "cachedResultName": "Contatos clientes",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1zJlt8gIi4Synj7kwTTdoPn7yiYBRVGDQ_MKlsPoKLng/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Página1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1zJlt8gIi4Synj7kwTTdoPn7yiYBRVGDQ_MKlsPoKLng/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Url Boleto": "={{ $json.Boleto }}",
+            "Dia de vencimento": "={{ $json['Data de vencimento'] }}",
+            "Empresa": "={{ $json.Nome }}",
+            "row_number": 0
+          },
+          "matchingColumns": [
+            "Empresa"
+          ],
+          "schema": [
+            {
+              "id": "Nome",
+              "displayName": "Nome",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Empresa",
+              "displayName": "Empresa",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "E-mail",
+              "displayName": "E-mail",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Telefone",
+              "displayName": "Telefone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Dia de vencimento",
+              "displayName": "Dia de vencimento",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Url Boleto",
+              "displayName": "Url Boleto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        4032,
+        192
+      ],
+      "id": "04f0d433-d2e1-4449-9b95-c88cc2553ead",
+      "name": "Update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Xs8Bc8KKbYBkELt6",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1zJlt8gIi4Synj7kwTTdoPn7yiYBRVGDQ_MKlsPoKLng",
+          "mode": "list",
+          "cachedResultName": "Contatos clientes",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1zJlt8gIi4Synj7kwTTdoPn7yiYBRVGDQ_MKlsPoKLng/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Página1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1zJlt8gIi4Synj7kwTTdoPn7yiYBRVGDQ_MKlsPoKLng/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Url Boleto": "={{ $json.Boleto }}",
+            "Dia de vencimento": "={{ $('Dias para vencer').item.json['Data de vencimento'] }}",
+            "Empresa": "={{ $json.Nome }}"
+          },
+          "matchingColumns": [
+            "Empresa"
+          ],
+          "schema": [
+            {
+              "id": "Nome",
+              "displayName": "Nome",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Empresa",
+              "displayName": "Empresa",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "E-mail",
+              "displayName": "E-mail",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Telefone",
+              "displayName": "Telefone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Dia de vencimento",
+              "displayName": "Dia de vencimento",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Url Boleto",
+              "displayName": "Url Boleto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        4080,
+        -1232
+      ],
+      "id": "dae497ce-3bd2-4ab1-9f0a-4fc47433faf8",
+      "name": "Update row in sheet2",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Xs8Bc8KKbYBkELt6",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "087cc725-84a8-4a47-826c-3c129b01bbc5",
+              "name": "To WhatsApp",
+              "value": "={{ $json.Telefone }}",
+              "type": "string"
+            },
+            {
+              "id": "3060e418-7318-4c24-bb25-e75569f8bb6d",
+              "name": "To E-mail",
+              "value": "={{ $json['E-mail'] }}",
+              "type": "string"
+            },
+            {
+              "id": "e3d5421d-6905-4647-8e92-44e77078c8b1",
+              "name": "message",
+              "value": "=Olá, {{ $json.Nome }}. Tudo bem? Sua cobrança da Work Company venceu a mais de 2 dias ({{ $json['Dia de vencimento'] }}). Segueo boleto para fazer o pagamento, Obrigado.",
+              "type": "string"
+            },
+            {
+              "id": "6f0a36ff-89cf-4e0d-a7a7-c13d2ee89b3e",
+              "name": "Boleto",
+              "value": "={{ $json['Url Boleto'] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        4464,
+        448
+      ],
+      "id": "bc29440d-f2c7-4320-99b1-6de044f192cf",
+      "name": "Vencido a 1 dia1"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        4800,
+        448
+      ],
+      "id": "5eccb58e-311b-487a-9694-cf0c4ecc8b3b",
+      "name": "Loop Over Items2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://worke.uazapi.com/send/media",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "token",
+              "value": "ca8b9f3f-8df0-44ad-967c-87533878c41d"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ $json['To WhatsApp'] }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.message }}"
+            },
+            {
+              "name": "type",
+              "value": "document"
+            },
+            {
+              "name": "docName",
+              "value": "Boleto Work Company.pdf"
+            },
+            {
+              "name": "file",
+              "value": "={{ $json.Boleto }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5104,
+        464
+      ],
+      "id": "029c62f6-98d0-4908-bc04-982a09c44cd4",
+      "name": "Enviando mensagem e PDF3"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1zJlt8gIi4Synj7kwTTdoPn7yiYBRVGDQ_MKlsPoKLng",
+          "mode": "list",
+          "cachedResultName": "Contatos clientes",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1zJlt8gIi4Synj7kwTTdoPn7yiYBRVGDQ_MKlsPoKLng/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Página1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1zJlt8gIi4Synj7kwTTdoPn7yiYBRVGDQ_MKlsPoKLng/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Empresa",
+              "lookupValue": "={{ $json.Empresa }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        4240,
+        448
+      ],
+      "id": "0ea37cfe-8875-489f-ba32-60a850fa5f19",
+      "name": "Get row(s) in sheet3",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Xs8Bc8KKbYBkELt6",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1zJlt8gIi4Synj7kwTTdoPn7yiYBRVGDQ_MKlsPoKLng",
+          "mode": "list",
+          "cachedResultName": "Contatos clientes",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1zJlt8gIi4Synj7kwTTdoPn7yiYBRVGDQ_MKlsPoKLng/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Página1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1zJlt8gIi4Synj7kwTTdoPn7yiYBRVGDQ_MKlsPoKLng/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Url Boleto": "={{ $json.Boleto }}",
+            "Dia de vencimento": "={{ $json['Data de vencimento'] }}",
+            "Empresa": "={{ $json.Nome }}"
+          },
+          "matchingColumns": [
+            "Empresa"
+          ],
+          "schema": [
+            {
+              "id": "Nome",
+              "displayName": "Nome",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Empresa",
+              "displayName": "Empresa",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "E-mail",
+              "displayName": "E-mail",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Telefone",
+              "displayName": "Telefone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Dia de vencimento",
+              "displayName": "Dia de vencimento",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Url Boleto",
+              "displayName": "Url Boleto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        4064,
+        448
+      ],
+      "id": "a164f828-2c5c-4a55-87d2-f9afb6e2dad0",
+      "name": "Update row in sheet3",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Xs8Bc8KKbYBkELt6",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        4704,
+        -816
+      ],
+      "id": "0cc9bf25-084f-4d3e-bdb3-8d9032895755",
+      "name": "Loop Over Items4"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://worke.uazapi.com/send/media",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "token"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ $json['To WhatsApp'] }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.message }}"
+            },
+            {
+              "name": "type",
+              "value": "document"
+            },
+            {
+              "name": "docName",
+              "value": "Boleto Work Company.pdf"
+            },
+            {
+              "name": "file",
+              "value": "={{ $json.Boleto }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5008,
+        -800
+      ],
+      "id": "0fa0a2a7-8ae5-4e75-84a8-4cd97a952951",
+      "name": "Enviando mensagem e PDF1"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1zJlt8gIi4Synj7kwTTdoPn7yiYBRVGDQ_MKlsPoKLng",
+          "mode": "list",
+          "cachedResultName": "Contatos clientes",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1zJlt8gIi4Synj7kwTTdoPn7yiYBRVGDQ_MKlsPoKLng/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Página1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1zJlt8gIi4Synj7kwTTdoPn7yiYBRVGDQ_MKlsPoKLng/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Empresa",
+              "lookupValue": "={{ $json.Empresa }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        4256,
+        -816
+      ],
+      "id": "64aacc99-4183-4e85-aedc-c984a51d9078",
+      "name": "Get row(s) in sheet1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Xs8Bc8KKbYBkELt6",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1zJlt8gIi4Synj7kwTTdoPn7yiYBRVGDQ_MKlsPoKLng",
+          "mode": "list",
+          "cachedResultName": "Contatos clientes",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1zJlt8gIi4Synj7kwTTdoPn7yiYBRVGDQ_MKlsPoKLng/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Página1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1zJlt8gIi4Synj7kwTTdoPn7yiYBRVGDQ_MKlsPoKLng/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Url Boleto": "={{ $json.Boleto }}",
+            "Dia de vencimento": "={{ $('Dias para vencer').item.json['Data de vencimento'] }}",
+            "Empresa": "={{ $json.Nome }}"
+          },
+          "matchingColumns": [
+            "Empresa"
+          ],
+          "schema": [
+            {
+              "id": "Nome",
+              "displayName": "Nome",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Empresa",
+              "displayName": "Empresa",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "E-mail",
+              "displayName": "E-mail",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Telefone",
+              "displayName": "Telefone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Dia de vencimento",
+              "displayName": "Dia de vencimento",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Url Boleto",
+              "displayName": "Url Boleto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        4064,
+        -816
+      ],
+      "id": "f78cd510-9fd1-4f5f-85ab-c94922f21376",
+      "name": "Update row in sheet4",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Xs8Bc8KKbYBkELt6",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 10
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        1584,
+        -144
+      ],
+      "id": "83f7fe20-cc7a-4d1c-a35b-080d32b1269e",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        4704,
+        -608
+      ],
+      "id": "3f721353-1003-4ded-b9ae-64075110fd32",
+      "name": "Loop Over Items5"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://worke.uazapi.com/send/media",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "token"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ $json['To WhatsApp'] }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.message }}"
+            },
+            {
+              "name": "type",
+              "value": "document"
+            },
+            {
+              "name": "docName",
+              "value": "Boleto Work Company.pdf"
+            },
+            {
+              "name": "file",
+              "value": "={{ $json.Boleto }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4992,
+        -592
+      ],
+      "id": "6dd44691-f158-48d9-bdcd-94572b22cd2c",
+      "name": "Enviando mensagem e PDF5"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1zJlt8gIi4Synj7kwTTdoPn7yiYBRVGDQ_MKlsPoKLng",
+          "mode": "list",
+          "cachedResultName": "Contatos clientes",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1zJlt8gIi4Synj7kwTTdoPn7yiYBRVGDQ_MKlsPoKLng/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Página1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1zJlt8gIi4Synj7kwTTdoPn7yiYBRVGDQ_MKlsPoKLng/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Empresa",
+              "lookupValue": "={{ $json.Empresa }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        4240,
+        -608
+      ],
+      "id": "a7085ae5-1d9d-4d93-87ce-f454e5f920a6",
+      "name": "Get row(s) in sheet5",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Xs8Bc8KKbYBkELt6",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1zJlt8gIi4Synj7kwTTdoPn7yiYBRVGDQ_MKlsPoKLng",
+          "mode": "list",
+          "cachedResultName": "Contatos clientes",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1zJlt8gIi4Synj7kwTTdoPn7yiYBRVGDQ_MKlsPoKLng/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Página1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1zJlt8gIi4Synj7kwTTdoPn7yiYBRVGDQ_MKlsPoKLng/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Url Boleto": "={{ $json.Boleto }}",
+            "Dia de vencimento": "={{ $('Dias para vencer').item.json['Data de vencimento'] }}",
+            "Empresa": "={{ $json.Nome }}"
+          },
+          "matchingColumns": [
+            "Empresa"
+          ],
+          "schema": [
+            {
+              "id": "Nome",
+              "displayName": "Nome",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Empresa",
+              "displayName": "Empresa",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "E-mail",
+              "displayName": "E-mail",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Telefone",
+              "displayName": "Telefone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Dia de vencimento",
+              "displayName": "Dia de vencimento",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Url Boleto",
+              "displayName": "Url Boleto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        4064,
+        -608
+      ],
+      "id": "2087e886-c9a6-400a-b430-5a2a27e713f0",
+      "name": "Update row in sheet5",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Xs8Bc8KKbYBkELt6",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        4704,
+        -416
+      ],
+      "id": "74642452-cce8-4a21-ad8f-844210a09d3d",
+      "name": "Loop Over Items6"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://worke.uazapi.com/send/media",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "token"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ $json['To WhatsApp'] }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.message }}"
+            },
+            {
+              "name": "type",
+              "value": "document"
+            },
+            {
+              "name": "docName",
+              "value": "Boleto Work Company.pdf"
+            },
+            {
+              "name": "file",
+              "value": "={{ $json.Boleto }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4992,
+        -400
+      ],
+      "id": "8cd4475f-38a1-4163-99ff-60eeb70ae15f",
+      "name": "Enviando mensagem e PDF6"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1zJlt8gIi4Synj7kwTTdoPn7yiYBRVGDQ_MKlsPoKLng",
+          "mode": "list",
+          "cachedResultName": "Contatos clientes",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1zJlt8gIi4Synj7kwTTdoPn7yiYBRVGDQ_MKlsPoKLng/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Página1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1zJlt8gIi4Synj7kwTTdoPn7yiYBRVGDQ_MKlsPoKLng/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Empresa",
+              "lookupValue": "={{ $json.Empresa }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        4240,
+        -416
+      ],
+      "id": "2d3f87c0-953b-49aa-aa6d-0e00395e5d8c",
+      "name": "Get row(s) in sheet6",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Xs8Bc8KKbYBkELt6",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1zJlt8gIi4Synj7kwTTdoPn7yiYBRVGDQ_MKlsPoKLng",
+          "mode": "list",
+          "cachedResultName": "Contatos clientes",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1zJlt8gIi4Synj7kwTTdoPn7yiYBRVGDQ_MKlsPoKLng/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Página1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1zJlt8gIi4Synj7kwTTdoPn7yiYBRVGDQ_MKlsPoKLng/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Url Boleto": "={{ $json.Boleto }}",
+            "Dia de vencimento": "={{ $('Dias para vencer').item.json['Data de vencimento'] }}",
+            "Empresa": "={{ $json.Nome }}"
+          },
+          "matchingColumns": [
+            "Empresa"
+          ],
+          "schema": [
+            {
+              "id": "Nome",
+              "displayName": "Nome",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Empresa",
+              "displayName": "Empresa",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "E-mail",
+              "displayName": "E-mail",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Telefone",
+              "displayName": "Telefone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Dia de vencimento",
+              "displayName": "Dia de vencimento",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Url Boleto",
+              "displayName": "Url Boleto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        4064,
+        -416
+      ],
+      "id": "6ef44665-63f6-412a-8fa3-0d4435ed20a7",
+      "name": "Update row in sheet6",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Xs8Bc8KKbYBkELt6",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        4704,
+        -1024
+      ],
+      "id": "6baa6449-952e-4f97-a1b7-af42e2e3fdc2",
+      "name": "Loop Over Items7"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://worke.uazapi.com/send/media",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "token"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ $json['To WhatsApp'] }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.message }}"
+            },
+            {
+              "name": "type",
+              "value": "document"
+            },
+            {
+              "name": "docName",
+              "value": "Boleto Work Company.pdf"
+            },
+            {
+              "name": "file",
+              "value": "={{ $json.Boleto }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5008,
+        -1008
+      ],
+      "id": "2738fe12-52c4-4650-8323-379490effe75",
+      "name": "Enviando mensagem e PDF7"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1zJlt8gIi4Synj7kwTTdoPn7yiYBRVGDQ_MKlsPoKLng",
+          "mode": "list",
+          "cachedResultName": "Contatos clientes",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1zJlt8gIi4Synj7kwTTdoPn7yiYBRVGDQ_MKlsPoKLng/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Página1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1zJlt8gIi4Synj7kwTTdoPn7yiYBRVGDQ_MKlsPoKLng/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Empresa",
+              "lookupValue": "={{ $json.Empresa }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        4256,
+        -1024
+      ],
+      "id": "c26f2915-b808-4724-aede-e6973046bce9",
+      "name": "Get row(s) in sheet7",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Xs8Bc8KKbYBkELt6",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1zJlt8gIi4Synj7kwTTdoPn7yiYBRVGDQ_MKlsPoKLng",
+          "mode": "list",
+          "cachedResultName": "Contatos clientes",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1zJlt8gIi4Synj7kwTTdoPn7yiYBRVGDQ_MKlsPoKLng/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Página1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1zJlt8gIi4Synj7kwTTdoPn7yiYBRVGDQ_MKlsPoKLng/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Url Boleto": "={{ $json.Boleto }}",
+            "Dia de vencimento": "={{ $('Dias para vencer').item.json['Data de vencimento'] }}",
+            "Empresa": "={{ $json.Nome }}"
+          },
+          "matchingColumns": [
+            "Empresa"
+          ],
+          "schema": [
+            {
+              "id": "Nome",
+              "displayName": "Nome",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Empresa",
+              "displayName": "Empresa",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "E-mail",
+              "displayName": "E-mail",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Telefone",
+              "displayName": "Telefone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Dia de vencimento",
+              "displayName": "Dia de vencimento",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Url Boleto",
+              "displayName": "Url Boleto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        4064,
+        -1024
+      ],
+      "id": "b9f0bf93-61f6-4318-aa00-351ea39b2bad",
+      "name": "Update row in sheet7",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Xs8Bc8KKbYBkELt6",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        4704,
+        -192
+      ],
+      "id": "b518f398-9c97-4c6c-898b-f5de6ac22881",
+      "name": "Loop Over Items8"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://worke.uazapi.com/send/media",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "token"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ $json['To WhatsApp'] }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.message }}"
+            },
+            {
+              "name": "type",
+              "value": "document"
+            },
+            {
+              "name": "docName",
+              "value": "Boleto Work Company.pdf"
+            },
+            {
+              "name": "file",
+              "value": "={{ $json.Boleto }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5008,
+        -176
+      ],
+      "id": "a16d2183-8824-4ddc-8fa6-b18b5e5a7dba",
+      "name": "Enviando mensagem e PDF8"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1zJlt8gIi4Synj7kwTTdoPn7yiYBRVGDQ_MKlsPoKLng",
+          "mode": "list",
+          "cachedResultName": "Contatos clientes",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1zJlt8gIi4Synj7kwTTdoPn7yiYBRVGDQ_MKlsPoKLng/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Página1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1zJlt8gIi4Synj7kwTTdoPn7yiYBRVGDQ_MKlsPoKLng/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Empresa",
+              "lookupValue": "={{ $json.Empresa }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        4240,
+        -192
+      ],
+      "id": "4fadeb3f-f5ce-41e6-843e-819768e9c448",
+      "name": "Get row(s) in sheet8",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Xs8Bc8KKbYBkELt6",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "087cc725-84a8-4a47-826c-3c129b01bbc5",
+              "name": "To WhatsApp",
+              "value": "={{ $json.Telefone }}",
+              "type": "string"
+            },
+            {
+              "id": "3060e418-7318-4c24-bb25-e75569f8bb6d",
+              "name": "To E-mail",
+              "value": "={{ $json['E-mail'] }}",
+              "type": "string"
+            },
+            {
+              "id": "e3d5421d-6905-4647-8e92-44e77078c8b1",
+              "name": "message",
+              "value": "=Olá, {{ $json.Nome }}. Tudo bem? Sua cobrança da Work Company vence hoje ({{ $json['Dia de vencimento'] }}). Segueo boleto para fazer o pagamento, Obrigado.",
+              "type": "string"
+            },
+            {
+              "id": "6f0a36ff-89cf-4e0d-a7a7-c13d2ee89b3e",
+              "name": "Boleto",
+              "value": "={{ $json['Url Boleto'] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        4464,
+        -192
+      ],
+      "id": "0deb28b6-2bd6-41d5-a616-9d67fbbb72cd",
+      "name": "Vence hoje1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "087cc725-84a8-4a47-826c-3c129b01bbc5",
+              "name": "To WhatsApp",
+              "value": "={{ $json.Telefone }}",
+              "type": "string"
+            },
+            {
+              "id": "3060e418-7318-4c24-bb25-e75569f8bb6d",
+              "name": "To E-mail",
+              "value": "={{ $json['E-mail'] }}",
+              "type": "string"
+            },
+            {
+              "id": "e3d5421d-6905-4647-8e92-44e77078c8b1",
+              "name": "message",
+              "value": "=Olá, {{ $json.Nome }}. Tudo bem? Sua cobrança da Work Company vence daqui 5 dias ({{ $json['Dia de vencimento'] }}). Segue o boleto para pagamento\n\nObrigado.",
+              "type": "string"
+            },
+            {
+              "id": "c73012d6-3c97-4c43-bf69-4134ed5d6658",
+              "name": "Boleto",
+              "value": "={{ $json['Url Boleto'] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        4480,
+        -1232
+      ],
+      "id": "3c42af37-e1e7-45ff-ba00-8a217958f591",
+      "name": "Vence em 5 Dias"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "087cc725-84a8-4a47-826c-3c129b01bbc5",
+              "name": "To WhatsApp",
+              "value": "={{ $json.Telefone }}",
+              "type": "string"
+            },
+            {
+              "id": "3060e418-7318-4c24-bb25-e75569f8bb6d",
+              "name": "To E-mail",
+              "value": "={{ $json['E-mail'] }}",
+              "type": "string"
+            },
+            {
+              "id": "e3d5421d-6905-4647-8e92-44e77078c8b1",
+              "name": "message",
+              "value": "=Olá, {{ $json.Nome }}. Tudo bem? Sua cobrança da Work Company vence daqui 4 dias ({{ $json['Dia de vencimento'] }}). Segue o boleto para pagamento\n\nObrigado.",
+              "type": "string"
+            },
+            {
+              "id": "c73012d6-3c97-4c43-bf69-4134ed5d6658",
+              "name": "Boleto",
+              "value": "={{ $json['Url Boleto'] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        4464,
+        -1024
+      ],
+      "id": "b1731124-0ff7-40d6-adc5-7625bbcc9fbe",
+      "name": "Vence em 4 dias"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "087cc725-84a8-4a47-826c-3c129b01bbc5",
+              "name": "To WhatsApp",
+              "value": "={{ $json.Telefone }}",
+              "type": "string"
+            },
+            {
+              "id": "3060e418-7318-4c24-bb25-e75569f8bb6d",
+              "name": "To E-mail",
+              "value": "={{ $json['E-mail'] }}",
+              "type": "string"
+            },
+            {
+              "id": "e3d5421d-6905-4647-8e92-44e77078c8b1",
+              "name": "message",
+              "value": "=Olá, {{ $json.Nome }}. Tudo bem? Sua cobrança da Work Company vence daqui 3 dias ({{ $json['Dia de vencimento'] }}). Segue o boleto para pagamento\n\nObrigado.",
+              "type": "string"
+            },
+            {
+              "id": "c73012d6-3c97-4c43-bf69-4134ed5d6658",
+              "name": "Boleto",
+              "value": "={{ $json['Url Boleto'] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        4464,
+        -816
+      ],
+      "id": "a68e2f5b-ee20-498e-bb5b-777ba4b91b09",
+      "name": "Vence em 3 dias"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "087cc725-84a8-4a47-826c-3c129b01bbc5",
+              "name": "To WhatsApp",
+              "value": "={{ $json.Telefone }}",
+              "type": "string"
+            },
+            {
+              "id": "3060e418-7318-4c24-bb25-e75569f8bb6d",
+              "name": "To E-mail",
+              "value": "={{ $json['E-mail'] }}",
+              "type": "string"
+            },
+            {
+              "id": "e3d5421d-6905-4647-8e92-44e77078c8b1",
+              "name": "message",
+              "value": "=Olá, {{ $json.Nome }}. Tudo bem? Sua cobrança da Work Company vence daqui 2 dias ({{ $json['Dia de vencimento'] }}). Segue o boleto para pagamento\n\nObrigado.",
+              "type": "string"
+            },
+            {
+              "id": "c73012d6-3c97-4c43-bf69-4134ed5d6658",
+              "name": "Boleto",
+              "value": "={{ $json['Url Boleto'] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        4464,
+        -608
+      ],
+      "id": "468846f6-e01d-4113-99d7-5d31a682ac75",
+      "name": "Vence em 2 dias"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "087cc725-84a8-4a47-826c-3c129b01bbc5",
+              "name": "To WhatsApp",
+              "value": "={{ $json.Telefone }}",
+              "type": "string"
+            },
+            {
+              "id": "3060e418-7318-4c24-bb25-e75569f8bb6d",
+              "name": "To E-mail",
+              "value": "={{ $json['E-mail'] }}",
+              "type": "string"
+            },
+            {
+              "id": "e3d5421d-6905-4647-8e92-44e77078c8b1",
+              "name": "message",
+              "value": "=Olá, {{ $json.Nome }}. Tudo bem? Sua cobrança da Work Company vence amanhã ({{ $json['Dia de vencimento'] }}). Segue o boleto para pagamento\n\nObrigado.",
+              "type": "string"
+            },
+            {
+              "id": "c73012d6-3c97-4c43-bf69-4134ed5d6658",
+              "name": "Boleto",
+              "value": "={{ $json['Url Boleto'] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        4464,
+        -416
+      ],
+      "id": "38f0e2bc-76a3-4e7f-8749-21a0e13633af",
+      "name": "Vence daqui 1 dia"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1zJlt8gIi4Synj7kwTTdoPn7yiYBRVGDQ_MKlsPoKLng",
+          "mode": "list",
+          "cachedResultName": "Contatos clientes",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1zJlt8gIi4Synj7kwTTdoPn7yiYBRVGDQ_MKlsPoKLng/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Página1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1zJlt8gIi4Synj7kwTTdoPn7yiYBRVGDQ_MKlsPoKLng/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Url Boleto": "={{ $json.Boleto }}",
+            "Dia de vencimento": "={{ $('Dias para vencer').item.json['Data de vencimento'] }}",
+            "Empresa": "={{ $json.Nome }}",
+            "row_number": 0
+          },
+          "matchingColumns": [
+            "Empresa"
+          ],
+          "schema": [
+            {
+              "id": "Nome",
+              "displayName": "Nome",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Empresa",
+              "displayName": "Empresa",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "E-mail",
+              "displayName": "E-mail",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Telefone",
+              "displayName": "Telefone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Dia de vencimento",
+              "displayName": "Dia de vencimento",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Url Boleto",
+              "displayName": "Url Boleto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        4048,
+        -192
+      ],
+      "id": "088198d4-6833-4285-ab9c-3672ddf20bd4",
+      "name": "Update row in sheet9",
+      "alwaysOutputData": false,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Xs8Bc8KKbYBkELt6",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "Schedule Trigger": [
+      {
+        "json": {
+          "timestamp": "2025-09-16T11:21:51.745-03:00",
+          "Readable date": "September 16th 2025, 11:21:51 am",
+          "Readable time": "11:21:51 am",
+          "Day of week": "Tuesday",
+          "Year": "2025",
+          "Month": "September",
+          "Day of month": "16",
+          "Hour": "11",
+          "Minute": "21",
+          "Second": "51",
+          "Timezone": "America/Sao_Paulo (UTC-03:00)"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Cora – Get Token1": {
+      "main": [
+        [
+          {
+            "node": "Cora – Consultar Boletos1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cora – Consultar Boletos1": {
+      "main": [
+        [
+          {
+            "node": "Summarize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Cora – Consultar Detalhes boletos Boletos2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summarize": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cora – Consultar Detalhes boletos Boletos2": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Dias para vencer",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Dias para vencer1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vence hoje": {
+      "main": [
+        [
+          {
+            "node": "Update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update row in sheet3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dias para vencer": {
+      "main": [
+        [
+          {
+            "node": "dias_para_vencimento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "dias_para_vencimento": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update row in sheet2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update row in sheet7",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update row in sheet4",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update row in sheet5",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update row in sheet6",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update row in sheet9",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields3": {
+      "main": [
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dias para vencer1": {
+      "main": [
+        [
+          {
+            "node": "Vence hoje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vencido a 1 dia": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items1": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Enviando mensagem e PDF2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items3": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Enviando mensagem e PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviando mensagem e PDF": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviando mensagem e PDF2": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Vence em 5 Dias",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet2": {
+      "main": [
+        [
+          {
+            "node": "Vencido a 1 dia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update row in sheet2": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vencido a 1 dia1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items2": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Enviando mensagem e PDF3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviando mensagem e PDF3": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet3": {
+      "main": [
+        [
+          {
+            "node": "Vencido a 1 dia1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update row in sheet3": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items4": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Enviando mensagem e PDF1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviando mensagem e PDF1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet1": {
+      "main": [
+        [
+          {
+            "node": "Vence em 3 dias",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update row in sheet4": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Cora – Get Token1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items5": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Enviando mensagem e PDF5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviando mensagem e PDF5": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet5": {
+      "main": [
+        [
+          {
+            "node": "Vence em 2 dias",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update row in sheet5": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items6": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Enviando mensagem e PDF6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviando mensagem e PDF6": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet6": {
+      "main": [
+        [
+          {
+            "node": "Vence daqui 1 dia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update row in sheet6": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items7": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Enviando mensagem e PDF7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviando mensagem e PDF7": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet7": {
+      "main": [
+        [
+          {
+            "node": "Vence em 4 dias",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update row in sheet7": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items8": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Enviando mensagem e PDF8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviando mensagem e PDF8": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet8": {
+      "main": [
+        [
+          {
+            "node": "Vence hoje1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vence hoje1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vence em 5 Dias": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vence em 4 dias": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vence em 3 dias": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vence em 2 dias": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vence daqui 1 dia": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update row in sheet9": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "114bcdc0-d811-468d-bbc3-852c2a7d72b3",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "98a7f76cbff973591af08e09b5be2fed14b55b37d878782c0638229a94477203"
+  },
+  "id": "Mv0nPyE3VZOGRCdG",
+  "tags": []
+}
