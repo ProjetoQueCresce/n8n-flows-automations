@@ -1,0 +1,1217 @@
+{
+  "name": "GD Captação LinkedIn - Oficial copy",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -304,
+        16
+      ],
+      "id": "f447fd0f-028a-400e-ba60-838dd95345db",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.apify.com/v2/actor-tasks/projetoquecresce~totvs-br/run-sync-get-dataset-items",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "token"
+            },
+            {
+              "name": "format",
+              "value": "json"
+            },
+            {
+              "name": "clean",
+              "value": "1"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -96,
+        16
+      ],
+      "id": "3de52604-6cee-4909-bf9e-b5a820d4d6b6",
+      "name": "API Apify"
+    },
+    {
+      "parameters": {
+        "jsCode": "const kw = /(totvs|protheus|datasul|\\brotvs\\s?rm\\b|logix)/i;\n\nconst getDomain = (url='') => {\n  try {\n    const u = new URL(url);\n    const host = u.hostname.replace(/^www\\./,'').toLowerCase();\n    // ignorar domínios que não ajudam\n    if (/(linkedin\\.com|totvs\\.app)/.test(host)) return '';\n    return host;\n  } catch { return ''; }\n};\n\nreturn items\n  .filter(i => kw.test(`${i.json.title||''} ${i.json.description||''}`))\n  .map(i => {\n    const j = i.json;\n    const domainFromApply   = getDomain(j.applyUrl);\n    const domainFromCompany = getDomain(j.companyUrl);\n    const domain_hint = domainFromApply || domainFromCompany || '';\n\n    return {\n      json: {\n        company: j.companyName || '',\n        job_title: j.title || '',\n        job_url: j.jobUrl || '',\n        location: j.location || '',\n        description: j.description || '',\n        // para o próximo passo (descobrir domínio definitivo)\n        domain_hint,\n        company_query: `${j.companyName||''} site oficial`\n      }\n    };\n  });\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        112,
+        16
+      ],
+      "id": "6c8e5e25-b0de-43a1-a49e-711b8fb10a39",
+      "name": "Normalize Jobs"
+    },
+    {
+      "parameters": {
+        "url": "https://autocomplete.clearbit.com/v1/companies/suggest",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "={{$json.domain_hint || $json.company}}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        528,
+        16
+      ],
+      "id": "5f4965a6-f679-444c-a7d2-678e17018d41",
+      "name": "Find domain (Clearbit)",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// ===== Function: Build target contact for each job =====\n// MODO: Run Once for All Items\n\nfunction norm(s){\n  return (s||'')\n    .toLowerCase()\n    .normalize('NFD')\n    .replace(/\\p{Diacritic}/gu,'');\n}\nfunction hasAny(text, words){\n  const t = norm(text || '');\n  return words.some(w => t.includes(norm(w)));\n}\n\nconst out = $input.all().map(({ json }) => {\n  const title = json.job_title || '';\n  const desc  = json.description || '';\n  const text  = `${title}\\n${desc}`;\n\n  let hunterDepartment = 'other';\n  let targets = [];\n  let seniorityTarget = ['manager','director','head','vp','cxo'];\n\n  const isTI = hasAny(text, [\n    'totvs','protheus','advpl','tds','smartclient','datasul','rm ',\n    'fluig','winthor','rms','consinco','erp','sistemas','ti','analista de sistemas',\n    'desenvolvedor','integra','api','webservice','sql server','oracle','progress 4gl'\n  ]);\n\n  const isRH = hasAny(text, [\n    'rh','gestao de pessoas','gestão de pessoas','folha','departamento pessoal','dp',\n    'rm labore','rm nucleus','rm chronus','liber','bonum','meu rh'\n  ]);\n\n  const isFIN = hasAny(text, [\n    'financeiro','contas a pagar','contas a receber','tesouraria','concilia',\n    'faturamento','contábil','contabil','controladoria','fluxus','saldus'\n  ]);\n\n  const isACA = hasAny(text, [\n    'secretaria academica','secretária academica','acadêmic','mec','rm educacional',\n    'coordenador academico','diretor academico','instituto','universit','faculdade','escolar'\n  ]);\n\n  const isOPS = hasAny(text, [\n    'pcp','chao de fabrica','chão de fábrica','compras','estoque','suprimentos',\n    'logistica','wms','abastecimento','manufatura','producao','produção'\n  ]);\n\n  if (isTI) {\n    hunterDepartment = 'it';\n    targets = [\n      'gerente de ti','coordenador de ti','líder de sistemas','it manager','head of it',\n      'gerente de sistemas','coordenador de sistemas','gestor de erp','erp manager'\n    ];\n  } else if (isRH) {\n    hunterDepartment = 'hr';\n    targets = [\n      'gerente de rh','bp de rh','coordenador de rh','coordenador de folha',\n      'gestão de pessoas','people manager','head of hr'\n    ];\n  } else if (isFIN) {\n    hunterDepartment = 'finance';\n    targets = [\n      'gerente financeiro','controller','coordenador financeiro','tesouraria',\n      'head of finance','finance manager'\n    ];\n  } else if (isACA) {\n    hunterDepartment = 'other';\n    targets = [\n      'secretario academico','secretária academica','coordenador academico',\n      'diretor academico','registrador academico','academic registrar'\n    ];\n  } else if (isOPS) {\n    hunterDepartment = 'other';\n    targets = [\n      'gerente de operacoes','coordenador de operacoes','gerente de supply chain',\n      'coordenador de compras','coordenador de estoque','operations manager'\n    ];\n  } else {\n    if (hasAny(text, ['erp','sistema','totvs'])) {\n      hunterDepartment = 'it';\n      targets = [\n        'gerente de ti','coordenador de ti','líder de sistemas','gestor de erp'\n      ];\n    } else {\n      hunterDepartment = 'other';\n      targets = ['gerente','coordenador','diretor'];\n    }\n  }\n\n  const extraEN = {\n    it:     ['it manager','head of it','it director','applications manager','enterprise applications'],\n    hr:     ['hr manager','people manager','head of hr'],\n    finance:['finance manager','head of finance','controller','fp&a manager'],\n    other:  []\n  }[hunterDepartment];\n\n  targets = Array.from(new Set([...(targets||[]), ...((extraEN)||[])]));\n\n  const titlesQuery = targets.map(t => `\"${t}\"`).join(' OR ');\n\n  let countryHint = '';\n  if (hasAny(json.location || '', ['brasil','brazil','sp','mg','pr','sc','rs','ba','ce','rj'])) {\n    countryHint = 'BR';\n  }\n\n  return {\n    json: {\n      ...json,\n      hunterDepartment,\n      targets,\n      titlesQuery,\n      seniorityTarget,\n      countryHint\n    }\n  };\n});\n\nreturn out;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        16
+      ],
+      "id": "a2779a1a-3dad-431f-8a2f-6ff8caab427d",
+      "name": "Cargos"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// pega a vaga no MESMO índice do item atual\nconst jobs = $items('Cargos', 0) ?? [];\nconst job  = jobs[$itemIndex]?.json ?? {}; // evita undefined\n\n// resposta do Clearbit: array ou objeto (às vezes vem em body)\nconst suggestions = Array.isArray($json) ? $json : ($json?.body ?? [$json]);\nconst best = suggestions?.[0] ?? {};\n\nconst company = job.company || job.company_query || '';\nconst domain  = best.domain  || job.domain_hint   || '';\n\nreturn {\n  json: {\n    ...job,\n    company,\n    domain_hint: domain,\n    domain_candidates: suggestions ?? [],\n    _idx: String($itemIndex), // chave para o Merge (mesmo nome/tipo do Set)\n  }\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        736,
+        176
+      ],
+      "id": "9de6b3d3-8cab-4d13-8504-56aca95fb2a8",
+      "name": "Pick domain"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.snov.io/v1/oauth/access_token",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "grant_type",
+              "value": "client_credentials"
+            },
+            {
+              "name": "client_id"
+            },
+            {
+              "name": "client_secret"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1040,
+        16
+      ],
+      "id": "d2b4dfd5-3e78-4d57-89d1-3e5bc1caa744",
+      "name": "SNOV – Token"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.snov.io/v2/domain-search/prospects/start",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.access_token }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"domain\": \"{{ $('Pick domain').item.json.domain_hint }}\",\n  \"page\": 1,\n  \"positions\": [\n    \"gerente de ti\",\n    \"gerente de sistemas\",\n    \"diretor de ti\",\n    \"diretor de sistemas\",\n    \"gestor de sistemas\",\n    \"gestor de ti\",\n    \"erp manager\",\n    \"Lider de sistemas\",\n    \"ceo\",\n    \"socio\"\n  ]\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1248,
+        16
+      ],
+      "id": "de8b9244-f280-4b8b-a202-ebfbf8b6ccb4",
+      "name": "SNOV POST – START"
+    },
+    {
+      "parameters": {
+        "amount": 30
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1440,
+        16
+      ],
+      "id": "ff18f222-cbcb-4488-9175-1a075d9b6d76",
+      "name": "Wait",
+      "webhookId": "d64ab437-9580-4e6c-a6cc-67b2b8fb848e"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.links.result }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('SNOV – Token').item.json.access_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1632,
+        16
+      ],
+      "id": "1fa9c0d0-ecaa-4c68-b08e-cd0c51b9aa61",
+      "name": "SNOV GET - RESULT"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0922a66c-2a25-4291-b1d8-e4c95b21b3d7",
+              "name": "email",
+              "value": "={{ $json.email }}",
+              "type": "string"
+            },
+            {
+              "id": "a13c5bbc-e050-4adb-8b90-0a125078ad1a",
+              "name": "empresa",
+              "value": "={{ $('Validação de Email').item.json.company }}",
+              "type": "string"
+            },
+            {
+              "id": "902388ea-c409-4168-b69d-284d762f8232",
+              "name": "primeiro nome",
+              "value": "={{ $json.first_name }}",
+              "type": "string"
+            },
+            {
+              "id": "85e462f9-a465-42ac-8fcc-58cd11a1eac4",
+              "name": "sobrenome",
+              "value": "={{ $json.last_name }}",
+              "type": "string"
+            },
+            {
+              "id": "700a8de4-3b2a-483d-a2a5-67c114e9d511",
+              "name": "cargo",
+              "value": "={{ $json.position }}",
+              "type": "string"
+            },
+            {
+              "id": "ef70f0bf-5efa-41f6-aee7-badc02fa87c4",
+              "name": "linkedin",
+              "value": "={{$json.linkedin || ''}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        4848,
+        160
+      ],
+      "id": "9d532304-c90e-4ed8-97a6-cf3cbe63d0ea",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        4608,
+        160
+      ],
+      "id": "aa7d712d-7ef1-44ef-a875-c63b95e1ef49",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "9ed1c097-0158-457e-8d24-cc2d6749692d",
+              "leftValue": "={{$json.email}}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        5056,
+        160
+      ],
+      "id": "75b76f65-bbd5-4aba-b22e-6edf73786f13",
+      "name": "Validação"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "fieldsToMatchString": "_idx",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2096,
+        160
+      ],
+      "id": "96400b21-4a71-4936-8c7f-cd30d003aeb7",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f8d53a73-395c-439a-a5af-644187d27a2f",
+              "name": "_idx",
+              "value": "={{$itemIndex}}",
+              "type": "string"
+            },
+            {
+              "id": "2b8145b1-9055-4a4b-b7e2-4e4a889e8571",
+              "name": "links.result",
+              "value": "={{ $('SNOV POST – START').item.json.links.result }}",
+              "type": "string"
+            },
+            {
+              "id": "8a5cec00-e33f-49c2-96c9-8cbf6bf1b066",
+              "name": "access_token",
+              "value": "={{ $('SNOV – Token').item.json.access_token }}",
+              "type": "string"
+            },
+            {
+              "id": "87886838-80b4-46a2-a3d5-36407a5fa850",
+              "name": "search_emails_start",
+              "value": "={{ $json.search_emails_start || '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1840,
+        16
+      ],
+      "id": "a76dc5ba-752e-4ede-9170-c707e61da179",
+      "name": "Edit Fields2"
+    },
+    {
+      "parameters": {
+        "compare": "selectedFields",
+        "fieldsToCompare": "=email",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.removeDuplicates",
+      "typeVersion": 2,
+      "position": [
+        5328,
+        144
+      ],
+      "id": "df6bc55d-22d0-4e42-86be-43a7b81fc348",
+      "name": "Remove Duplicates"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0922a66c-2a25-4291-b1d8-e4c95b21b3d7",
+              "name": "email",
+              "value": "={{ $json.email }}",
+              "type": "string"
+            },
+            {
+              "id": "a13c5bbc-e050-4adb-8b90-0a125078ad1a",
+              "name": "empresa",
+              "value": "={{ ($json.empresa ?? '').trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "902388ea-c409-4168-b69d-284d762f8232",
+              "name": "primeiro nome",
+              "value": "={{ $json[\"primeiro nome\"] }}",
+              "type": "string"
+            },
+            {
+              "id": "85e462f9-a465-42ac-8fcc-58cd11a1eac4",
+              "name": "sobrenome",
+              "value": "={{ $json.sobrenome }}",
+              "type": "string"
+            },
+            {
+              "id": "700a8de4-3b2a-483d-a2a5-67c114e9d511",
+              "name": "cargo",
+              "value": "={{ $json.cargo }}",
+              "type": "string"
+            },
+            {
+              "id": "ef70f0bf-5efa-41f6-aee7-badc02fa87c4",
+              "name": "linkedin",
+              "value": "={{ $json.linkedin }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        5760,
+        144
+      ],
+      "id": "764620d7-c6d7-43b3-8963-d8c0a7667fa7",
+      "name": "Edit Fields3"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "15hpt5Wa2L7-RFrm5IVFw1aEcbeB3zrS9skRhtppYmGQ",
+          "mode": "list",
+          "cachedResultName": "Groudwork - PipeDrive",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/15hpt5Wa2L7-RFrm5IVFw1aEcbeB3zrS9skRhtppYmGQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Página1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/15hpt5Wa2L7-RFrm5IVFw1aEcbeB3zrS9skRhtppYmGQ/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "email": "={{ $json.email }}",
+            "empresa": "={{ $json.empresa }}",
+            "primeiro nome": "={{ $json['primeiro nome'] }}",
+            "sobrenome": "={{ $json.sobrenome }}",
+            "cargo": "={{ $json.cargo }}",
+            "linkedin": "={{ $json.linkedin }}",
+            "pipedrive": "true",
+            "Captação": "Work Company"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "empresa",
+              "displayName": "empresa",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "primeiro nome",
+              "displayName": "primeiro nome",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "sobrenome",
+              "displayName": "sobrenome",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "cargo",
+              "displayName": "cargo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "linkedin",
+              "displayName": "linkedin",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "pipedrive",
+              "displayName": "pipedrive",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Captação",
+              "displayName": "Captação",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "ID",
+              "displayName": "ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        6000,
+        144
+      ],
+      "id": "07fbc1b2-8db2-43ad-83fb-25143779d925",
+      "name": "Adiciona na Planilha1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Xs8Bc8KKbYBkELt6",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Buscar vagas no LINKEDIN",
+        "height": 448,
+        "width": 1248
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -352,
+        -80
+      ],
+      "typeVersion": 1,
+      "id": "8d867994-c357-485a-92bc-3636a77c4bbe",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## Buscar informações da Empresa e Cargos",
+        "height": 528,
+        "width": 2064,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        896,
+        -80
+      ],
+      "typeVersion": 1,
+      "id": "69c24f5e-649b-4202-959a-0ff9ec034c2a",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## Buscar emails dos tomadores de decisão",
+        "height": 640,
+        "width": 1536,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2992,
+        -208
+      ],
+      "typeVersion": 1,
+      "id": "c7253307-e621-47f0-a3a0-f8515b624232",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "## Trata Dados e Adiciona na planilha",
+        "height": 544,
+        "width": 1568,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        4560,
+        0
+      ],
+      "typeVersion": 1,
+      "id": "8ded9ec9-6890-4fea-9b60-2fd3f032c3a3",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        5328,
+        336
+      ],
+      "id": "d57c949e-1f6e-4ffb-a846-f9a11499ad77",
+      "name": "No Operation, do nothing"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Escolhe o melhor e-mail (se vier em emails.emails[])\nfunction pickBestEmail(list) {\n  const arr = Array.isArray(list?.emails) ? list.emails\n           : Array.isArray(list) ? list\n           : [];\n  const rank = s => ({ valid:3, accept_all:2, unknown:1, unverifiable:1, invalid:0 })[(s||'').toLowerCase()] ?? 0;\n  return arr.slice().sort((a,b) => rank(b.smtp_status) - rank(a.smtp_status))[0] || null;\n}\n\n// Valida URL http/https\nconst isHttpUrl = u => typeof u === 'string' && /^https?:\\/\\/\\S+/i.test((u||'').trim());\n\n// Tem dados de pessoa?\nfunction hasPersonFields(o = {}) {\n  const hasEmailObj = o.emails && (o.emails.email || (Array.isArray(o.emails.emails) && o.emails.emails.length > 0));\n  return !!(o.first_name || o.last_name || o.position || o.linkedin || o.source_page || o.email || hasEmailObj);\n}\n\nconst out = [];\n\nfunction pushItem(src, parent = {}, token = '') {\n  // exige result válido (prospects/result do START)\n  const resultUrl = (src.result ?? src?.links?.result ?? parent.result ?? parent?.links?.result ?? '').trim();\n  if (!isHttpUrl(resultUrl)) return;\n\n  // exige dados de pessoa para não gerar “pais” vazios\n  if (!hasPersonFields(src)) return;\n\n  const best = pickBestEmail(src['e-mails'] ?? src.emails);\n\n  // pega search_emails_start somente do prospect (se existir e for URL)\n  const searchStart = isHttpUrl(src.search_emails_start) ? src.search_emails_start.trim() : '';\n\n  out.push({\n    json: {\n      company:      src.company ?? parent.company ?? '',\n      domain:       src.domain  ?? parent.domain  ?? parent?.meta?.domain ?? parent.domain_hint ?? '',\n      first_name:   src.first_name ?? '',\n      last_name:    src.last_name  ?? '',\n      position:     src.position   ?? '',\n      linkedin:     src.linkedin ?? src.source_page ?? '',\n      email:        src.email ?? best?.email ?? '',\n      email_status: src.email_status ?? best?.smtp_status ?? '',\n      // ⬇️ novo campo propagado\n      search_emails_start: searchStart,\n      result:       resultUrl,\n      access_token: src.access_token ?? parent.access_token ?? token ?? '',\n    }\n  });\n}\n\nfor (const { json: curr } of $input.all()) {\n  const token = curr.access_token || '';\n\n  // Só empurra nível raiz se tiver dados de pessoa\n  if (hasPersonFields(curr)) pushItem(curr, curr, token);\n\n  // Prospects em data[]\n  const prospects = Array.isArray(curr.data) ? curr.data : [];\n  for (const p of prospects) if (hasPersonFields(p)) pushItem(p, curr, token);\n}\n\nreturn out;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2544,
+        160
+      ],
+      "id": "2e69a780-157b-48e1-aa9c-47576b2f3e1d",
+      "name": "Formata os Dados"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "9ed1c097-0158-457e-8d24-cc2d6749692d",
+              "leftValue": "={{$json.email}}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2752,
+        160
+      ],
+      "id": "a0897912-0bd6-47f1-abc5-8d1d1c86c509",
+      "name": "Validação de Email"
+    },
+    {
+      "parameters": {
+        "amount": 20
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        3328,
+        0
+      ],
+      "id": "f41c12b3-a1e6-4c41-930c-a3c197aa646e",
+      "name": "Wait2",
+      "webhookId": "142ce156-8f32-4cd5-9b7e-71f6234698be"
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Validação de Email').item.json.result }}",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "task_hash",
+              "value": "={{ $json.data.task_hash }}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Validação de Email').item.json.access_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3552,
+        0
+      ],
+      "id": "b47845f8-d08b-4c72-bb0f-5aaf8e712e3b",
+      "name": "GET - Snov Finder"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.snov.io/v2/emails-by-domain-by-name/start",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $json.access_token.trim() }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n  JSON.stringify({\n    rows: [{\n      domain:      $json.domain || $json['domínio'] || '',\n      first_name:  $json.first_name || $json['primeiro nome'] || '',\n      last_name:   $json.last_name  || $json['sobrenome']     || ''\n    }]\n  })\n}}\n",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3120,
+        0
+      ],
+      "id": "355726ed-f94c-4d2e-a70c-2df9c3774bb7",
+      "name": "POST - Snov Finder"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ---- Helpers ----\nfunction normalizeEmails(src) {\n  if (!src) return [];\n  if (Array.isArray(src)) return src;               // [{email, smtp_status}]\n  if (Array.isArray(src.emails)) return src.emails; // { emails: [...] }\n  return [];\n}\nfunction rankStatus(s) {\n  const m = { valid: 3, accept_all: 2, unknown: 1, unverifiable: 1, invalid: 0 };\n  return m[(s || \"\").toLowerCase()] ?? 0;\n}\nfunction bestEmailOf(person) {\n  const list = normalizeEmails(person?.emails ?? person?.[\"e-mails\"] ?? person?.email);\n  return list.slice().sort((a,b) => rankStatus(b.smtp_status) - rankStatus(a.smtp_status))[0] || null;\n}\nfunction pickBestPerson(arr) {\n  let bestP = null, bestE = null, bestScore = -2;\n  for (const p of arr) {\n    const e = bestEmailOf(p);\n    const sc = e ? rankStatus(e.smtp_status) : -1; // sem e-mail = -1\n    if (sc > bestScore) { bestP = p; bestE = e; bestScore = sc; }\n  }\n  return { person: bestP, email: bestE };\n}\nfunction clean(s) {\n  if (s == null) return \"\";\n  const t = String(s).trim();\n  return t.toLowerCase() === \"null\" ? \"\" : t.replace(/\\s+-\\s+.*$/, \"\");\n}\n\n// ---- Main: 1 saída por item de entrada ----\nconst out = [];\nfor (const { json } of $input.all()) {\n  const domain = json.domain || json?.meta?.domain || \"\";\n  const result = json.result || json?.links?.result || \"\";\n  const data   = Array.isArray(json.data) ? json.data : [];\n\n  // escolhe um único contato por domínio\n  const { person, email } = pickBestPerson(data);\n\n  out.push({\n    json: {\n      domain,\n      first_name:  person ? clean(person.first_name) : \"\",\n      last_name:   person ? clean(person.last_name)  : \"\",\n      position:    person ? (person.position || \"\")  : \"\",\n      linkedin:    person ? (person.linkedin || person.source_page || \"\") : \"\",\n      email:       email?.email || \"\",\n      email_status:(email?.smtp_status || \"\").toLowerCase(),\n      result\n    }\n  });\n}\nreturn out;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3792,
+        0
+      ],
+      "id": "41713766-3d08-4216-b6d1-7237f4930636",
+      "name": "Trata os Dados"
+    },
+    {
+      "parameters": {
+        "compare": "selectedFields",
+        "fieldsToCompare": "links.result",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.removeDuplicates",
+      "typeVersion": 2,
+      "position": [
+        2320,
+        160
+      ],
+      "id": "21db1a79-88da-4afe-ae2e-4176091ec0fd",
+      "name": "Remove Duplicates Result"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c4263d92-abb2-45e7-9fc0-03b2973c8623",
+              "leftValue": "={{ ($json.email || '').trim().length }}",
+              "rightValue": "0",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        4016,
+        0
+      ],
+      "id": "bbe766a4-b94d-45b4-931f-a35df7e97d7d",
+      "name": "If"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        4320,
+        -144
+      ],
+      "id": "d2a43033-6537-4220-bc81-e2d5d1622767",
+      "name": "No Operation, do nothing2"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Mode: Run Once for All Items\n// Language: JavaScript\n\nconst items = $input.all();\n\n// Bloqueia emails do domínio totvs.com (com ou sem subdomínios)\nconst block = /@(?:[^@\\s]*\\.)?totvs\\.com$/i;\n\nconst filtered = items.filter(it => {\n  const email = String(it.json.email || '').trim();\n  return !block.test(email);\n});\n\nreturn filtered;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5536,
+        144
+      ],
+      "id": "5825a673-e835-4f23-a40a-1f2cb2cdf76b",
+      "name": "Remove @totvs.com"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "API Apify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API Apify": {
+      "main": [
+        [
+          {
+            "node": "Normalize Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Jobs": {
+      "main": [
+        [
+          {
+            "node": "Cargos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cargos": {
+      "main": [
+        [
+          {
+            "node": "Find domain (Clearbit)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find domain (Clearbit)": {
+      "main": [
+        [
+          {
+            "node": "Pick domain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pick domain": {
+      "main": [
+        [
+          {
+            "node": "SNOV – Token",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "SNOV – Token": {
+      "main": [
+        [
+          {
+            "node": "SNOV POST – START",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SNOV POST – START": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "SNOV GET - RESULT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SNOV GET - RESULT": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Validação",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validação": {
+      "main": [
+        [
+          {
+            "node": "Remove Duplicates",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Remove Duplicates Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields2": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove Duplicates": {
+      "main": [
+        [
+          {
+            "node": "Remove @totvs.com",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields3": {
+      "main": [
+        [
+          {
+            "node": "Adiciona na Planilha1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formata os Dados": {
+      "main": [
+        [
+          {
+            "node": "Validação de Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validação de Email": {
+      "main": [
+        [
+          {
+            "node": "POST - Snov Finder",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Wait2": {
+      "main": [
+        [
+          {
+            "node": "GET - Snov Finder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "POST - Snov Finder": {
+      "main": [
+        [
+          {
+            "node": "Wait2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET - Snov Finder": {
+      "main": [
+        [
+          {
+            "node": "Trata os Dados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trata os Dados": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove Duplicates Result": {
+      "main": [
+        [
+          {
+            "node": "Formata os Dados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "No Operation, do nothing2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove @totvs.com": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "2nwbK6ZYJ1LTzv0f"
+  },
+  "versionId": "35b84eba-b6d2-4c8d-b77c-39334368c57d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "98a7f76cbff973591af08e09b5be2fed14b55b37d878782c0638229a94477203"
+  },
+  "id": "wbG3359IOBzPdP00",
+  "tags": []
+}

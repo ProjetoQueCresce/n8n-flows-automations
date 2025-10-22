@@ -1,0 +1,789 @@
+{
+  "name": "GD Atualização Pipedrive - Oficial",
+  "nodes": [
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "15hpt5Wa2L7-RFrm5IVFw1aEcbeB3zrS9skRhtppYmGQ",
+          "mode": "list",
+          "cachedResultName": "Groudwork - PipeDrive",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/15hpt5Wa2L7-RFrm5IVFw1aEcbeB3zrS9skRhtppYmGQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Página1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/15hpt5Wa2L7-RFrm5IVFw1aEcbeB3zrS9skRhtppYmGQ/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "ID"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        544,
+        0
+      ],
+      "id": "8bb60d6a-ec7d-4705-a635-b006da283ca6",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Xs8Bc8KKbYBkELt6",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "23f301f7-79d7-49e6-98a3-4add3242f87f",
+              "name": "email",
+              "value": "={{ $json.email }}",
+              "type": "string"
+            },
+            {
+              "id": "dc8e41b3-e86c-4f82-9d85-707433135858",
+              "name": "empresa",
+              "value": "={{ $json.empresa }}",
+              "type": "string"
+            },
+            {
+              "id": "48aefc02-d574-42fc-9e6d-47d6f6eeec26",
+              "name": "primeiro nome",
+              "value": "={{ $json['primeiro nome'] }}",
+              "type": "string"
+            },
+            {
+              "id": "21dbd8ce-f3e4-4a6c-ad0f-0b231551946f",
+              "name": "sobrenome",
+              "value": "={{ $json.sobrenome }}",
+              "type": "string"
+            },
+            {
+              "id": "0365d43d-ad96-45e7-b20d-1a6a38d68081",
+              "name": "cargo",
+              "value": "={{ $json.cargo }}",
+              "type": "string"
+            },
+            {
+              "id": "2a0b28c5-5448-4be1-9def-d4cfc3df558d",
+              "name": "linkedin",
+              "value": "={{ $json.linkedin }}",
+              "type": "string"
+            },
+            {
+              "id": "84f2319a-b223-44d4-8bed-d9d77a459ef9",
+              "name": "Captação",
+              "value": "={{ $json['Captação'] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        752,
+        0
+      ],
+      "id": "8d3c68fa-3c6c-4fe4-b4de-e910820d53c8",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Function: remover itens duplicados por e-mail (dropa todos os repetidos)\n// - Mantém apenas itens cujo e-mail aparece exatamente 1x\n// - Canonicaliza Gmail (remove pontos e +tag)\n// Ajustes:\nconst EMAIL_FIELD = 'email';\nconst KEEP_ITEMS_WITHOUT_EMAIL = true;   // true = mantém itens sem e-mail; false = descarta\nconst CANONICALIZE_GMAIL = true;\n\nfunction canonicalEmail(e) {\n  let s = (e || '').toString().toLowerCase().trim();\n  if (!s) return '';\n  const at = s.indexOf('@');\n  if (at === -1) return s;\n  let local = s.slice(0, at);\n  let domain = s.slice(at + 1);\n\n  if (CANONICALIZE_GMAIL && (domain === 'gmail.com' || domain === 'googlemail.com')) {\n    local = local.split('+')[0].replace(/\\./g, '');\n    domain = 'gmail.com';\n  }\n  return `${local}@${domain}`;\n}\n\nconst items = $input.all();\n\n// 1) Contar ocorrências\nconst counts = new Map();\nfor (const it of items) {\n  const j = it.json || {};\n  const raw = j[EMAIL_FIELD] ?? j.email ?? '';\n  const key = canonicalEmail(raw);\n  if (key) counts.set(key, (counts.get(key) || 0) + 1);\n}\n\n// 2) Emitir somente únicos; duplicados são descartados (ambos)\nconst out = [];\nfor (const it of items) {\n  const j = it.json || {};\n  const raw = j[EMAIL_FIELD] ?? j.email ?? '';\n  const key = canonicalEmail(raw);\n\n  if (!key) {\n    if (KEEP_ITEMS_WITHOUT_EMAIL) out.push({ json: j });\n    continue;\n  }\n\n  if ((counts.get(key) || 0) === 1) {\n    out.push({ json: j });\n  }\n}\n\nreturn out;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        0
+      ],
+      "id": "2bf6a14b-5400-4ff9-ad45-0c3b4ec9c44b",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "23f301f7-79d7-49e6-98a3-4add3242f87f",
+              "name": "email",
+              "value": "={{ $json.email }}",
+              "type": "string"
+            },
+            {
+              "id": "dc8e41b3-e86c-4f82-9d85-707433135858",
+              "name": "empresa",
+              "value": "={{ $json.empresa }}",
+              "type": "string"
+            },
+            {
+              "id": "48aefc02-d574-42fc-9e6d-47d6f6eeec26",
+              "name": "primeiro nome",
+              "value": "={{ $json['primeiro nome'] }}",
+              "type": "string"
+            },
+            {
+              "id": "21dbd8ce-f3e4-4a6c-ad0f-0b231551946f",
+              "name": "sobrenome",
+              "value": "={{ $json.sobrenome }}",
+              "type": "string"
+            },
+            {
+              "id": "0365d43d-ad96-45e7-b20d-1a6a38d68081",
+              "name": "cargo",
+              "value": "={{ $json.cargo }}",
+              "type": "string"
+            },
+            {
+              "id": "2a0b28c5-5448-4be1-9def-d4cfc3df558d",
+              "name": "linkedin",
+              "value": "={{ $json.linkedin }}",
+              "type": "string"
+            },
+            {
+              "id": "8fa71cc3-7984-4ab6-aa72-5559e5aa7c7b",
+              "name": "Captação",
+              "value": "={{ $json['Captação'] }}",
+              "type": "string"
+            },
+            {
+              "id": "606c0a6e-b132-4035-ba2b-d47adc200f24",
+              "name": "nome completo",
+              "value": "={{ $json[\"nome completo\"] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1472,
+        0
+      ],
+      "id": "e7189b98-9215-4cad-86b7-60d531a6a687",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ea474b58-bb1b-4bdf-b4d4-21511e3ba1f8",
+              "name": "id",
+              "value": "={{ $json.id }}",
+              "type": "number"
+            },
+            {
+              "id": "23f301f7-79d7-49e6-98a3-4add3242f87f",
+              "name": "email",
+              "value": "={{ $('Edit Fields1').item.json.email }}",
+              "type": "string"
+            },
+            {
+              "id": "dc8e41b3-e86c-4f82-9d85-707433135858",
+              "name": "empresa",
+              "value": "={{ $('Edit Fields1').item.json.empresa }}",
+              "type": "string"
+            },
+            {
+              "id": "48aefc02-d574-42fc-9e6d-47d6f6eeec26",
+              "name": "primeiro nome",
+              "value": "={{ $('Edit Fields1').item.json['primeiro nome'] }}",
+              "type": "string"
+            },
+            {
+              "id": "21dbd8ce-f3e4-4a6c-ad0f-0b231551946f",
+              "name": "sobrenome",
+              "value": "={{ $('Edit Fields1').item.json.sobrenome }}",
+              "type": "string"
+            },
+            {
+              "id": "0365d43d-ad96-45e7-b20d-1a6a38d68081",
+              "name": "cargo",
+              "value": "={{ $('Edit Fields1').item.json.cargo }}",
+              "type": "string"
+            },
+            {
+              "id": "2a0b28c5-5448-4be1-9def-d4cfc3df558d",
+              "name": "linkedin",
+              "value": "={{ $('Edit Fields1').item.json.linkedin }}",
+              "type": "string"
+            },
+            {
+              "id": "884a53e7-37a9-464d-9ba5-fd6f1b757cb0",
+              "name": "nome completo",
+              "value": "={{ $('Edit Fields1').item.json['nome completo'] }}",
+              "type": "string"
+            },
+            {
+              "id": "16420644-d2b2-4742-855b-5b56a9fbe5e4",
+              "name": "phone",
+              "value": "={{ $json.phone[0].value }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1920,
+        0
+      ],
+      "id": "9881248f-0496-4855-a69a-d1972a355618",
+      "name": "Edit Fields2"
+    },
+    {
+      "parameters": {
+        "resource": "person",
+        "name": "={{ $json['nome completo'] }}",
+        "additionalFields": {
+          "customProperties": {
+            "property": [
+              {
+                "name": "d2abb34490e810d511a300fe4765e8176ddf2a77",
+                "value": "LinkedIn"
+              },
+              {
+                "name": "050364c39cc00af3fa0688f0c9f69ca683f11635",
+                "value": "={{ $json.linkedin }}"
+              }
+            ]
+          },
+          "email": [
+            "={{ $json.email }}"
+          ],
+          "label": 192,
+          "owner_id": 24640255
+        }
+      },
+      "type": "n8n-nodes-base.pipedrive",
+      "typeVersion": 1,
+      "position": [
+        1696,
+        0
+      ],
+      "id": "90661031-9db8-4f9b-8d41-6292b3f7cbd8",
+      "name": "Create a person",
+      "credentials": {
+        "pipedriveApi": {
+          "id": "nctJHdCz6FAP5I2P",
+          "name": "Pipedrive account - Groundwork"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// n8n - Function\n// Entrada: items[] com keys \"primeiro nome\" e \"sobrenome\"\n// Saída: mesmo item + \"nome completo\"\n\nreturn items.map(item => {\n  const j = item.json;\n\n  const primeiro = (j[\"primeiro nome\"] ?? \"\").toString().trim();\n  const sobrenome = (j[\"sobrenome\"] ?? \"\").toString().trim();\n\n  const nomeCompleto = `${primeiro} ${sobrenome}`.trim();\n\n  j[\"nome completo\"] = nomeCompleto || \"\";\n\n  return item;\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1248,
+        0
+      ],
+      "id": "dec70bae-e844-4fb6-b26d-bae7f7b44e36",
+      "name": "Formata Nome Completo"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 8,
+              "triggerAtMinute": 10
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        336,
+        0
+      ],
+      "id": "06fd1c4b-8f13-48a1-a0a3-a587c11e1db6",
+      "name": "Schedule Trigger1"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "15hpt5Wa2L7-RFrm5IVFw1aEcbeB3zrS9skRhtppYmGQ",
+          "mode": "list",
+          "cachedResultName": "Groudwork - PipeDrive",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/15hpt5Wa2L7-RFrm5IVFw1aEcbeB3zrS9skRhtppYmGQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Página1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1o4uaqXnOxFfS8dBmEtQwVlQFrKpFeZ_z0RWWIxOiuGU/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ID": "={{ $json.id }}",
+            "email": "={{ $json.email }}"
+          },
+          "matchingColumns": [
+            "email"
+          ],
+          "schema": [
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "empresa",
+              "displayName": "empresa",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "primeiro nome",
+              "displayName": "primeiro nome",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "sobrenome",
+              "displayName": "sobrenome",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "cargo",
+              "displayName": "cargo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "linkedin",
+              "displayName": "linkedin",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "pipedrive",
+              "displayName": "pipedrive",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Captação",
+              "displayName": "Captação",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "ID",
+              "displayName": "ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        2144,
+        0
+      ],
+      "id": "66d020ad-b07c-441b-9c70-f877bdd2cbd1",
+      "name": "Adiciona ID na planilha GroundWork - PipeDrive",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Xs8Bc8KKbYBkELt6",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1o4uaqXnOxFfS8dBmEtQwVlQFrKpFeZ_z0RWWIxOiuGU",
+          "mode": "list",
+          "cachedResultName": "Lista de Leads - Groudwork",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1o4uaqXnOxFfS8dBmEtQwVlQFrKpFeZ_z0RWWIxOiuGU/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Página1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1o4uaqXnOxFfS8dBmEtQwVlQFrKpFeZ_z0RWWIxOiuGU/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.ID }}",
+            "Nome completo": "={{ $('Edit Fields2').item.json['primeiro nome'] }} {{ $('Edit Fields2').item.json.sobrenome }}",
+            "Primeiro nome": "={{ $('Edit Fields2').item.json['primeiro nome'] }}",
+            "Segundo/ultimo nome": "={{ $('Edit Fields2').item.json.sobrenome }}",
+            "email": "={{ $('Edit Fields2').item.json.email }}",
+            "email_tmp": "={{ $('Edit Fields2').item.json.email }}",
+            "phone": "={{ $('Create a person').item.json.phone[0].value }}",
+            "empresa": "={{ $('Edit Fields2').item.json.empresa }}",
+            "Cargo/Posição": "={{ $('Edit Fields2').item.json.cargo }}",
+            "Linkedin": "={{ $('Edit Fields2').item.json.linkedin }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Nome completo",
+              "displayName": "Nome completo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Primeiro nome",
+              "displayName": "Primeiro nome",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Segundo/ultimo nome",
+              "displayName": "Segundo/ultimo nome",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email_tmp",
+              "displayName": "email_tmp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "phone",
+              "displayName": "phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "empresa",
+              "displayName": "empresa",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Cargo/Posição",
+              "displayName": "Cargo/Posição",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Linkedin",
+              "displayName": "Linkedin",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Primeiro Disparo",
+              "displayName": "Primeiro Disparo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Segundo Disparo",
+              "displayName": "Segundo Disparo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Terceiro Disparo",
+              "displayName": "Terceiro Disparo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Quarto Disparo",
+              "displayName": "Quarto Disparo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Quinto Disparo",
+              "displayName": "Quinto Disparo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Sexto Disparo",
+              "displayName": "Sexto Disparo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2352,
+        0
+      ],
+      "id": "2b00c813-7505-40d6-b592-3b9f7ebf2712",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Xs8Bc8KKbYBkELt6",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Formata Nome Completo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Create a person",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields2": {
+      "main": [
+        [
+          {
+            "node": "Adiciona ID na planilha GroundWork - PipeDrive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formata Nome Completo": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a person": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger1": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Adiciona ID na planilha GroundWork - PipeDrive": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "2nwbK6ZYJ1LTzv0f"
+  },
+  "versionId": "53ff9ede-abcc-48b4-b7d5-76c75e38ba26",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "98a7f76cbff973591af08e09b5be2fed14b55b37d878782c0638229a94477203"
+  },
+  "id": "SiApfSa7Kda4UfeL",
+  "tags": []
+}
