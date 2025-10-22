@@ -1,0 +1,838 @@
+{
+  "name": "GW Disparo #Email 1 - Oficial",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 0-59/10 6-20 * * 1-5"
+            },
+            {}
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -336,
+        640
+      ],
+      "id": "b3776bd2-92c3-4a75-b518-da0c842ab560",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "documentId": {
+          "__rl": true,
+          "value": "1o4uaqXnOxFfS8dBmEtQwVlQFrKpFeZ_z0RWWIxOiuGU",
+          "mode": "list",
+          "cachedResultName": "Lista de Leads - Groudwork",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1o4uaqXnOxFfS8dBmEtQwVlQFrKpFeZ_z0RWWIxOiuGU/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Página1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1o4uaqXnOxFfS8dBmEtQwVlQFrKpFeZ_z0RWWIxOiuGU/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Primeiro Disparo"
+            },
+            {
+              "lookupColumn": "Respondeu"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -160,
+        640
+      ],
+      "id": "19615b68-2082-4974-87fb-9b3cf1556a1e",
+      "name": "Buscador de Contatos",
+      "credentials": {
+        "googleApi": {
+          "id": "WFfYbnxXdjAidNDj",
+          "name": "Google Sheets account - Service Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Você é um redator de outbound da GroundWork, empresa de tecnologia e inovação especializada em integrações, automações e melhorias no ecossistema ERP Protheus TOTVS (Protheus/RM, etc.).\n\nEscreva em PT-BR, com tom extremamente humanizado, leve e profissional. Parágrafos curtos. Sem emojis, sem jargão excessivo, sem “espero que este e-mail o encontre bem”.\n\nEntradas (variáveis do fluxo):\n\n{{ $json['Nome completo'] }}\n\n{{ $json['Primeiro nome'] }}\n\n{{ $json.email }}\n\n{{ $json['Cargo/Posição'] }} (pode vir vazio)\n\nRegras obrigatórias\n\nSempre use o {{ $json['Primeiro nome'] }} do contato na saudação.\n\nSe {{ $json['Primeiro nome'] }} vier vazio, derive assim:\na) use o primeiro token de {{ $json['Nome completo'] }}; se faltar,\nb) use a parte antes de @ em email, separando por ponto/traço/underscore e capitalizando (ex.: “joao.pilla” → “João”).\n\nMencione o cargo somente se cargo existir.\nCom cargo: “vi que você atua como {{ $json['Cargo/Posição'] }} …”\nSem cargo: “vi que você está à frente do ERP Protheus TOTVS\"\n\nEvite promessas específicas; foque em ganhos práticos: reduzir retrabalho, automatizar rotinas, integrações (CRM/BI/marketplaces), conciliações, indicadores em tempo real, robôs no Protheus/RM.\n\n- Sempre que possivel utilize as variavéis abaixo:\n{{ $json.empresa }}\n{{ $json['Cargo/Posição'] }}\n\n\nFormato de saída:\n\n{\n  \"email1: {\n    \"subject\": \"TÍTULO CURTO E NATURAL\",\n    \"body\": \"CORPO DO E-MAIL COM PARAGRAFOSe no final: Atenciosamente, \nLarissa Souza\nBusiness Specialist\"\n  }\n}\n\n\n#IMPORTANTE lembre-se que você está mandando um email diretamente para o cliente ! então NUNCA coloque \"[Seu Nome]\" \"[Nome do Destinatário]\", nem nada do tipo no corpo do e-mail.",
+              "role": "system"
+            },
+            {
+              "content": "=## Email #1  \n\nModelo de Email de Referencia:\nAssunto: {{ $json['Primeiro nome'] }} Pré-avaliação ERP Protheus TOTVS: Descubra em minutos oportunidades de melhoria no seu ambiente.\n\n\"Olá {{ $json['Primeiro nome'] }}, tudo bem?\n\nSomos especialistas em implantação, desenvolvimento e suporte aos módulos e arquitetura (Infra &amp; Cloud) dos principais ERPs TOTVS®.\n\nPreparamos uma pré-avaliação gratuita para que você responda algumas perguntas rápidas sobre o ambiente da {{ $json.empresa }}.\n\nClique nesse link para acessar - {{ $json.Link }}\n\nCom base nas suas respostas, você recebe um resultado claro e prático para entender como seu ambiente pode evoluir.\n\nE vale destacar: o SSG (Serviço de Sustentação da Groundwork) é nosso modelo estruturado de entrega de serviços, que vai além do suporte tradicional. Ele garante continuidade, evolução e governança no seu ERP Protheus TOTVS®,\nmantendo seu ambiente estável, seguro e estratégico, com uma abordagem proativa e orientada a resultados.\n\nSe não for com você, poderia indicar a pessoa responsável? Caso não queira receber, basta responder remover.\"\n\nSempre finalize com:\n\"Atenciosamente, \nLarissa Souza\nBusiness Specialist\"\n\nRegras gerais para todos os e-mails:\n\n- Tom consultivo, respeitoso e direto\n- Sem suposições sobre processos internos da empresa\n- Nada de termos como “tecnologia de ponta”, “solução completa” ou “transformador”\n- Nunca use “Topa”, “Espero que esteja bem” ou “Vi que estão crescendo”\n- Comece com: Olá {{ $json['Primeiro nome'] }}\n- Use escreva com paragrafos para o texto não ficar longo\n- Caso {{ $json.empresa }}, esteja vazio, NÃO utilize.\n- Sempre que possivel utilize as variavéis abaixo:\n{{ $json.empresa }} (caso não tenha, remova do email)\n{{ $json['Cargo/Posição'] }}\n\n---\n\nFormato de saída:\n\n{\n  \"email1: {\n    \"subject\": \"TÍTULO CURTO E NATURAL\",\n    \"body\": \"CORPO DO E-MAIL COM PARAGRAFOSe no final: Atenciosamente, \nLarissa Souza\nBusiness Specialist\"\n  }\n}"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        416,
+        640
+      ],
+      "id": "346f7b92-363e-45c8-ac19-63de021b473b",
+      "name": "Message a model",
+      "credentials": {
+        "openAiApi": {
+          "id": "pzPRokyHPpD8qyJ1",
+          "name": "OpenAi account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f2c6514b-d00a-4a10-adfa-c44f2adceb8e",
+              "name": "assunto",
+              "value": "={{ $json.message.content.email1.subject }}",
+              "type": "string"
+            },
+            {
+              "id": "e223a8af-2e42-4761-abcb-8d89013454e0",
+              "name": "corpo",
+              "value": "={{ $json.message.content.email1.body }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        736,
+        640
+      ],
+      "id": "b7b17df2-02b0-45d5-8ac0-6fab31463277",
+      "name": "Higienizador de Dados 2"
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1o4uaqXnOxFfS8dBmEtQwVlQFrKpFeZ_z0RWWIxOiuGU",
+          "mode": "list",
+          "cachedResultName": "Lista de Leads - Groudwork",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1o4uaqXnOxFfS8dBmEtQwVlQFrKpFeZ_z0RWWIxOiuGU/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Página1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1o4uaqXnOxFfS8dBmEtQwVlQFrKpFeZ_z0RWWIxOiuGU/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Primeiro Disparo": "={{ $now.setZone('America/Sao_Paulo').toFormat('dd/MM/yyyy') }}",
+            "email": "={{ $('Edit Fields').item.json.email }}"
+          },
+          "matchingColumns": [
+            "email"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Nome completo",
+              "displayName": "Nome completo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Primeiro nome",
+              "displayName": "Primeiro nome",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Segundo/ultimo nome",
+              "displayName": "Segundo/ultimo nome",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "phone",
+              "displayName": "phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "empresa",
+              "displayName": "empresa",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Cargo/Posição",
+              "displayName": "Cargo/Posição",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Linkedin",
+              "displayName": "Linkedin",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Primeiro Disparo",
+              "displayName": "Primeiro Disparo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Segundo Disparo",
+              "displayName": "Segundo Disparo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Terceiro Disparo",
+              "displayName": "Terceiro Disparo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Quarto Disparo",
+              "displayName": "Quarto Disparo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Quinto Disparo",
+              "displayName": "Quinto Disparo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Sexto Disparo",
+              "displayName": "Sexto Disparo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1440,
+        624
+      ],
+      "id": "20d08f37-54f8-41bb-903d-a4d67eef7773",
+      "name": "Atualizador de Disparo",
+      "credentials": {
+        "googleApi": {
+          "id": "WFfYbnxXdjAidNDj",
+          "name": "Google Sheets account - Service Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "toRecipients": "={{ $('Edit Fields').item.json.email }}",
+        "subject": "={{ $json.assunto }}",
+        "bodyContent": "={{ $json.corpo }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.microsoftOutlook",
+      "typeVersion": 2,
+      "position": [
+        1232,
+        640
+      ],
+      "id": "970c5066-0038-478d-9093-65720dd2f614",
+      "name": "Disparo do Email",
+      "webhookId": "866bfc50-2b60-44ef-aed6-7d48bd4407aa",
+      "alwaysOutputData": true,
+      "credentials": {
+        "microsoftOutlookOAuth2Api": {
+          "id": "cTmzloiCrY0J1X73",
+          "name": "Credencial Groudwork"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "7dc577a6-4be5-42fc-9087-1ad693452c10",
+              "name": "id",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "55a9818e-bdbc-4885-9a34-02151fa3ad9e",
+              "name": "Nome completo",
+              "value": "={{ $json['Nome completo'] }}",
+              "type": "string"
+            },
+            {
+              "id": "ef718a4e-8424-4eb5-a32d-88c4516084e7",
+              "name": "Primeiro nome",
+              "value": "={{ $json['Primeiro nome'] }}",
+              "type": "string"
+            },
+            {
+              "id": "6b9aac63-c82d-4def-90e4-1c25950cebdc",
+              "name": "Segundo/ultimo nome",
+              "value": "={{ $json['Segundo/ultimo nome'] }}",
+              "type": "string"
+            },
+            {
+              "id": "db7fc275-71a8-4465-a2e2-117b19077da6",
+              "name": "email",
+              "value": "={{ $json.email }}",
+              "type": "string"
+            },
+            {
+              "id": "3858edcb-e06f-428a-85ef-04a5a653c721",
+              "name": "phone",
+              "value": "={{ $json.phone }}",
+              "type": "string"
+            },
+            {
+              "id": "5694adcd-a142-4ed0-9046-72365a29f1da",
+              "name": "empresa",
+              "value": "={{ $json.empresa }}",
+              "type": "string"
+            },
+            {
+              "id": "50b5fec6-6bb1-4acd-bdd9-d9acf9b5a6d5",
+              "name": "Cargo/Posição",
+              "value": "={{ $json['Cargo/Posição'] }}",
+              "type": "string"
+            },
+            {
+              "id": "00693426-02c0-4ff9-891f-e38be2aa6df6",
+              "name": "Linkedin",
+              "value": "={{ $json.Linkedin }}",
+              "type": "string"
+            },
+            {
+              "id": "412383b8-7a55-4180-96c8-5ccf9c218cd8",
+              "name": "Link",
+              "value": "https://tally.so/r/3q90Q9",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        208,
+        640
+      ],
+      "id": "5b62480a-3913-49fe-8268-787050dbd5f4",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "resource": "person",
+        "operation": "update",
+        "personId": "={{ $('Edit Fields').item.json.id }}",
+        "updateFields": {
+          "customProperties": {
+            "property": [
+              {
+                "name": "f6d5d132e85d511d968d5c26b35c092a5a472d36",
+                "value": "1º Disparo"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.pipedrive",
+      "typeVersion": 1,
+      "position": [
+        1648,
+        624
+      ],
+      "id": "a62caa61-fcce-4f76-8d12-49dbe92e3814",
+      "name": "Update a person",
+      "credentials": {
+        "pipedriveApi": {
+          "id": "nctJHdCz6FAP5I2P",
+          "name": "Pipedrive account - Groundwork"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1o4uaqXnOxFfS8dBmEtQwVlQFrKpFeZ_z0RWWIxOiuGU",
+          "mode": "list",
+          "cachedResultName": "Lista de Leads - Groudwork",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1o4uaqXnOxFfS8dBmEtQwVlQFrKpFeZ_z0RWWIxOiuGU/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Página1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1o4uaqXnOxFfS8dBmEtQwVlQFrKpFeZ_z0RWWIxOiuGU/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Primeiro Disparo": "erro",
+            "email": "={{ $('Edit Fields').item.json.email }}",
+            "Segundo Disparo": "invalido",
+            "Terceiro Disparo": "invalido",
+            "Quarto Disparo": "invalido",
+            "Quinto Disparo": "invalido",
+            "Sexto Disparo": "invalido"
+          },
+          "matchingColumns": [
+            "email"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Nome completo",
+              "displayName": "Nome completo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Primeiro nome",
+              "displayName": "Primeiro nome",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Segundo/ultimo nome",
+              "displayName": "Segundo/ultimo nome",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "phone",
+              "displayName": "phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "empresa",
+              "displayName": "empresa",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Cargo/Posição",
+              "displayName": "Cargo/Posição",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Linkedin",
+              "displayName": "Linkedin",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Primeiro Disparo",
+              "displayName": "Primeiro Disparo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Segundo Disparo",
+              "displayName": "Segundo Disparo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Terceiro Disparo",
+              "displayName": "Terceiro Disparo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Quarto Disparo",
+              "displayName": "Quarto Disparo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Quinto Disparo",
+              "displayName": "Quinto Disparo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Sexto Disparo",
+              "displayName": "Sexto Disparo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1440,
+        816
+      ],
+      "id": "43466350-cef1-489f-9f89-53bd8bed0490",
+      "name": "Atualizador de Disparo1",
+      "credentials": {
+        "googleApi": {
+          "id": "WFfYbnxXdjAidNDj",
+          "name": "Google Sheets account - Service Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// Passa apenas 1 contato por execução, priorizando quem ainda não teve disparo.\n// Ordem de prioridade das colunas de controle:\nconst COLUMNS = ['Primeiro Disparo', 'Segundo Disparo', 'Terceiro Disparo'];\n\n// Quantas linhas de cabeçalho existem antes dos dados (geralmente 1)\nconst HEADER_ROWS = 1;\n\nconst isEmpty = (v) =>\n  v === undefined || v === null || (typeof v === 'string' && v.trim() === '');\n\nfunction nextEmptyDisparo(row) {\n  for (const col of COLUMNS) {\n    if (isEmpty(row[col])) return col; // primeira coluna de disparo vazia\n  }\n  return null;\n}\n\n// Alguns nodes do Google Sheets devolvem o número da linha em \"id\".\n// Se não vier, estimamos pelo índice (linha = HEADER_ROWS + 1 + index).\nfunction getRowNumber(item, index) {\n  const j = item.json || {};\n  return j.id ?? j.rowNumber ?? j['Row Number'] ?? (HEADER_ROWS + 1 + index);\n}\n\n// Procura a primeira linha elegível\nfor (let i = 0; i < items.length; i++) {\n  const row = items[i].json || {};\n  const targetCol = nextEmptyDisparo(row);\n  if (targetCol) {\n    // Anexa metadados úteis para o próximo node atualizar a planilha\n    return [{\n      json: {\n        ...row,\n        __rowNumber: getRowNumber(items[i], i),     // número da linha na planilha\n        __disparoColuna: targetCol                  // qual coluna você deve preencher\n      }\n    }];\n  }\n}\n\n// Se nada estiver pendente, não passa ninguém adiante\nreturn [];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        16,
+        640
+      ],
+      "id": "b3ff47b2-9fa9-4545-b4ad-7eec09f3de9c",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "jsCode": "// GateOne: só passa se houver exatamente 1 item\nconst count = items.length;\nif (count === 1) {\n  return items;                 // segue para o próximo nó\n}\nthrow new Error(`Esperado 1 item, recebi ${count}. Abortando.`);\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        992,
+        640
+      ],
+      "id": "80ccf611-2045-469c-97e0-ef29c7a3b1c5",
+      "name": "Só passa um item"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Buscador de Contatos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscador de Contatos": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Higienizador de Dados 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Higienizador de Dados 2": {
+      "main": [
+        [
+          {
+            "node": "Só passa um item",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Disparo do Email": {
+      "main": [
+        [
+          {
+            "node": "Atualizador de Disparo",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Atualizador de Disparo1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Atualizador de Disparo": {
+      "main": [
+        [
+          {
+            "node": "Update a person",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Só passa um item": {
+      "main": [
+        [
+          {
+            "node": "Disparo do Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "517e3fea-1e04-4d13-a7c1-5ec1125cec41",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "98a7f76cbff973591af08e09b5be2fed14b55b37d878782c0638229a94477203"
+  },
+  "id": "2gEIlDHaXWK7vxPM",
+  "tags": []
+}

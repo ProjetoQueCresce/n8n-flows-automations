@@ -1,0 +1,443 @@
+{
+  "name": "Atualizando a planilha e o pipedrive com pessoas que já responderam",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "output": "raw",
+        "filters": {
+          "readStatus": "both"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.microsoftOutlookTrigger",
+      "typeVersion": 1,
+      "position": [
+        -32,
+        48
+      ],
+      "id": "8ad6e388-55d7-4686-a371-08806018f60b",
+      "name": "Microsoft Outlook Trigger",
+      "credentials": {
+        "microsoftOutlookOAuth2Api": {
+          "id": "cTmzloiCrY0J1X73",
+          "name": "Credencial Groudwork"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Function (pós Microsoft Outlook Trigger - RAW)\n * Anti Auto-Reply / Bounce Guard — versão LITE (sem headers)\n * Bloqueia: OOO/auto-reply, bounces/NDR, read/delivery receipts, postmaster/mailer-daemon/Mimecast/Outlook etc.\n * Se classificar como automático/bounce => return [] (corta o fluxo)\n * Caso contrário => segue com fromEmail normalizado para o lookup na planilha\n */\n\nconst DEBUG_ATTACH_REASON = false; // true: não bloqueia; só anexa _autoReplyReasons p/ inspecionar\n\nfunction norm(s){ return String(s || '').trim(); }\nfunction lower(s){ return norm(s).toLowerCase(); }\nfunction stripHtmlLike(s){ return lower(norm(s).replace(/<[^>]*>/g,' ')); }\n\n// --- Campos vindos do Trigger (RAW) ---\nconst subject = lower($json.subject || '');\nconst preview = lower($json.bodyPreview || ''); // costuma trazer um “resumo” do corpo\nconst fromAddress = lower(\n  $json.from?.emailAddress?.address ||\n  $json.from?.address ||\n  (typeof $json.from === 'string' ? $json.from.replace(/^.*<([^>]+)>.*/, '$1') : '') ||\n  ''\n);\nconst fromName = lower(\n  $json.from?.emailAddress?.name ||\n  (typeof $json.from === 'string' ? $json.from.replace(/<.*?>/g,'') : '') ||\n  ''\n);\n\n// Corpo “utilizável” (preview já é texto)\nconst body = `${subject}\\n${preview}`;\n\n// --- Padrões/Heurísticas (PT-BR + EN) ---\nconst FROM_BOUNCE_PATTERNS = [\n  /mailer-?daemon/i,\n  /mail delivery (subsystem|system|service)/i,\n  /postmaster/i,\n  /mimecast/i,\n  /microsoft( )?outlook/i,\n  /no-?reply|do-?not-?reply|noreply/i,\n];\n\nconst SUBJECT_OOO_PATTERNS = [\n  /auto.?reply/i,\n  /automatic.?reply/i,\n  /out.?of.?office|o\\.?o\\.?o/i,\n  /vacation|away from the office/i,\n  /resposta.?autom[aá]tica|mensagem.?autom[aá]tica|fora.?do.?escrit[oó]rio|f[eé]rias|ausente|retornarei|retorno dia/i,\n];\n\nconst SUBJECT_RECEIPT_PATTERNS = [\n  /^read:/i, /read receipt/i, /not read/i, /delivery receipt/i,\n  /confirma[cç][aã]o de leitura/i, /confirma[cç][aã]o de entrega/i, /aviso de leitura/i,\n];\n\nconst SUBJECT_BOUNCE_PATTERNS = [\n  /delivery (status|failed|failure|problem|notification)/i,\n  /undeliver(ed|able)/i,\n  /returned mail/i,\n  /address (not found|unknown|does not exist)/i,\n  /couldn'?t be delivered|could not be delivered/i,\n  /message (not delivered|failure)/i,\n  // PT-BR\n  /n[aã]o foi poss[ií]vel entregar/i,\n  /mensagem n[aã]o.*entregue/i,\n  /falha de entrega/i,\n  /endere[cç]o (desconhecido|inexistente)/i,\n];\n\nconst BODY_BOUNCE_MARKERS = [\n  /diagnostic-code/i,\n  /\\b5\\d\\d\\b/i,                  // códigos 500+\n  /\\b550\\s+5\\.\\d\\.\\d\\b/i,        // 550 5.x.x\n  /mailbox full|quota exceeded/i,\n  /user unknown|recipient unknown|address rejected|invalid recipient/i,\n  /host not found|domain not found|unknown user/i,\n  /policy violation|blocked|spam/i,\n  /undeliver/i,\n  /transcript of session follows/i,\n  /remote server returned/i,\n  /delivery report/i,\n];\n\n// --- Regras ---\nconst reasons = [];\n\nconst fromSuspicious =\n  FROM_BOUNCE_PATTERNS.some(r => r.test(fromAddress)) ||\n  FROM_BOUNCE_PATTERNS.some(r => r.test(fromName));\n\nif (fromSuspicious) reasons.push(`from-suspicious:${fromAddress||fromName}`);\n\nconst subjOOO     = SUBJECT_OOO_PATTERNS.some(r => r.test(subject));\nconst subjBounce  = SUBJECT_BOUNCE_PATTERNS.some(r => r.test(subject));\nconst subjReceipt = SUBJECT_RECEIPT_PATTERNS.some(r => r.test(subject));\nif (subjOOO)     reasons.push(`subject-ooo:${subject}`);\nif (subjBounce)  reasons.push(`subject-bounce:${subject}`);\nif (subjReceipt) reasons.push(`subject-receipt:${subject}`);\n\n// Marcadores claros no preview do corpo\nconst bodyHasBounceMarkers = BODY_BOUNCE_MARKERS.some(r => r.test(body));\nif (bodyHasBounceMarkers) reasons.push('body-dsn-markers');\n\n// Salvaguarda: se for um \"Re:\" ou \"Fw:\" vindo de humano (from NÃO suspeito),\n// damos um voto de confiança e só bloqueamos se houver marcadores fortes no corpo.\nconst looksLikeConversation = /^(\\s*re:|\\s*fwd?:)/i.test(subject);\n\nlet isAuto =\n  fromSuspicious ||\n  subjOOO ||\n  subjReceipt ||\n  subjBounce ||\n  bodyHasBounceMarkers;\n\n// Se parece conversa humana e o remetente NÃO é suspeito,\n// só bloqueia se o corpo tiver marcadores fortes de bounce.\nif (looksLikeConversation && !fromSuspicious) {\n  isAuto = bodyHasBounceMarkers; // exige marcador forte\n  if (isAuto) reasons.push('conversation-heuristic:forced-by-body-markers');\n}\n\n// Normaliza o e-mail para o lookup\nconst emailMatch = fromAddress.match(/[a-z0-9._%+-]+@[a-z0-9.-]+\\.[a-z]{2,}/);\nconst fromEmail = emailMatch ? emailMatch[0] : '';\n\n// Saída\nif (DEBUG_ATTACH_REASON) {\n  return [{ json: { ...$json, _autoReplySuspect:isAuto, _autoReplyReasons:reasons, fromEmail } }];\n}\nif (isAuto) return []; // corta fluxo (não atualiza planilha)\n\nreturn [{ json: { ...$json, fromEmail } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        192,
+        48
+      ],
+      "id": "13264d16-160d-42d2-a879-243871442b81",
+      "name": "Excluindo e-mails que retornaram"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "663fd121-49d9-4851-ae68-33de8319ff1b",
+              "name": "from.emailAddress",
+              "value": "={{ $json.from.emailAddress.address }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        448,
+        48
+      ],
+      "id": "2dbc34eb-fbc8-4ae9-8710-adef693b321a",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1o4uaqXnOxFfS8dBmEtQwVlQFrKpFeZ_z0RWWIxOiuGU",
+          "mode": "list",
+          "cachedResultName": "Lista de Leads - Groudwork",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1o4uaqXnOxFfS8dBmEtQwVlQFrKpFeZ_z0RWWIxOiuGU/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Página1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1o4uaqXnOxFfS8dBmEtQwVlQFrKpFeZ_z0RWWIxOiuGU/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "email": "={{ $json.from.emailAddress }}",
+            "Respondeu": "Sim"
+          },
+          "matchingColumns": [
+            "email"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Nome completo",
+              "displayName": "Nome completo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Primeiro nome",
+              "displayName": "Primeiro nome",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Segundo/ultimo nome",
+              "displayName": "Segundo/ultimo nome",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "email_tmp",
+              "displayName": "email_tmp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "phone",
+              "displayName": "phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "empresa",
+              "displayName": "empresa",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Cargo/Posição",
+              "displayName": "Cargo/Posição",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Linkedin",
+              "displayName": "Linkedin",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Primeiro Disparo",
+              "displayName": "Primeiro Disparo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Segundo Disparo",
+              "displayName": "Segundo Disparo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Terceiro Disparo",
+              "displayName": "Terceiro Disparo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Quarto Disparo",
+              "displayName": "Quarto Disparo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Quinto Disparo",
+              "displayName": "Quinto Disparo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Sexto Disparo",
+              "displayName": "Sexto Disparo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Respondeu",
+              "displayName": "Respondeu",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        656,
+        48
+      ],
+      "id": "5f0bcf0a-99b1-46f9-9754-f82eb7d291a5",
+      "name": "Update row in sheet",
+      "credentials": {
+        "googleApi": {
+          "id": "WFfYbnxXdjAidNDj",
+          "name": "Google Sheets account - Service Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "person",
+        "operation": "update",
+        "personId": "={{ $json.id }}",
+        "updateFields": {
+          "customProperties": {
+            "property": [
+              {
+                "name": "f6d5d132e85d511d968d5c26b35c092a5a472d36",
+                "value": "Respondeu"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.pipedrive",
+      "typeVersion": 1,
+      "position": [
+        1104,
+        48
+      ],
+      "id": "fcb3c8ef-fdcc-4b48-b0bd-07be97533ee8",
+      "name": "Update a person",
+      "credentials": {
+        "pipedriveApi": {
+          "id": "nctJHdCz6FAP5I2P",
+          "name": "Pipedrive account - Groundwork"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "documentId": {
+          "__rl": true,
+          "value": "1o4uaqXnOxFfS8dBmEtQwVlQFrKpFeZ_z0RWWIxOiuGU",
+          "mode": "list",
+          "cachedResultName": "Lista de Leads - Groudwork",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1o4uaqXnOxFfS8dBmEtQwVlQFrKpFeZ_z0RWWIxOiuGU/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Página1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1o4uaqXnOxFfS8dBmEtQwVlQFrKpFeZ_z0RWWIxOiuGU/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "email",
+              "lookupValue": "={{ $json.email }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        864,
+        48
+      ],
+      "id": "80776223-0a30-4254-beb1-adbd4234a07d",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleApi": {
+          "id": "WFfYbnxXdjAidNDj",
+          "name": "Google Sheets account - Service Account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Microsoft Outlook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Excluindo e-mails que retornaram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Excluindo e-mails que retornaram": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Update a person",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1f699f87-9949-41bb-b4f5-c67a20d2e0ec",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "98a7f76cbff973591af08e09b5be2fed14b55b37d878782c0638229a94477203"
+  },
+  "id": "sdk0HaK62mkoyiRD",
+  "tags": []
+}

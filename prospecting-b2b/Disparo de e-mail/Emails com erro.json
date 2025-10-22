@@ -1,0 +1,538 @@
+{
+  "name": "Emails com erro",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {
+          "hasAttachments": false,
+          "foldersToInclude": [
+            "AAMkADE4M2Y5MGY2LTgwOWMtNDNiNS1hY2U1LTE5ZWEwYjZkZGJmMwAuAAAAAAB18QuJq_S9RpazRD5ZpBA5AQAMbImA0EwIQbPWWUjvaUsAAAASOhiOAAA="
+          ],
+          "readStatus": "both"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.microsoftOutlookTrigger",
+      "typeVersion": 1,
+      "position": [
+        -48,
+        0
+      ],
+      "id": "c63246bf-3497-49d1-9083-69e14f1e035b",
+      "name": "Microsoft Outlook Trigger",
+      "credentials": {
+        "microsoftOutlookOAuth2Api": {
+          "id": "cTmzloiCrY0J1X73",
+          "name": "Credencial Groudwork"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "4b1aabd3-1cf9-4121-ab7d-a20cd580c611",
+              "leftValue": "={{ $json.from }}",
+              "rightValue": "=postmaster",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "6e083fb4-5aed-4c73-bc4a-9f5d54e05084",
+              "leftValue": "={{ $json.from }}",
+              "rightValue": "mailer-daemon",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "42828f50-4ea4-4244-9873-96b58c54a872",
+              "leftValue": "={{ $json.subject }}",
+              "rightValue": "Undeliverable",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "8d29b986-7256-4789-bd75-ad35925c6387",
+              "leftValue": "={{ $json.subject }}",
+              "rightValue": "Delivery has failed",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "f8332a24-633b-4c0b-bb52-c60fb60922da",
+              "leftValue": "={{ $json.subject }}",
+              "rightValue": "Returned mail",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "dfce79b2-128a-4a68-ba73-3d4c70ffdf6c",
+              "leftValue": "={{ $json.subject }}",
+              "rightValue": "Mail delivery failed",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "84ff8e8a-434b-4e4b-94c6-d7334960c0d0",
+              "leftValue": "={{ $json.subject }}",
+              "rightValue": "Mensagem não entregue",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "dc10d331-13f2-46f2-b63a-e96c202c7197",
+              "leftValue": "={{ $json.subject }}",
+              "rightValue": "Falha na entrega",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "b9e70c1b-5e00-4d5a-9403-af64bbe9d279",
+              "leftValue": "={{ $json.subject }}",
+              "rightValue": "Não é possível entregar",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        192,
+        0
+      ],
+      "id": "9e8ac520-4254-49e3-84bb-000ddd39ace1",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "jsCode": "function pick(re, text){ const m = re.exec(text); return m ? m[1].trim() : null; }\n\nconst out = [];\nfor (const it of items) {\n  const subject = it.json.subject || \"\";\n  const body    = it.json.bodyPreview || \"\";\n  const text    = subject + \"\\n\" + body;\n\n  let failed = pick(/Final-Recipient:\\s*rfc822;\\s*([^\\s;<>]+)\\s*/i, text)\n            || pick(/Original-Recipient:\\s*rfc822;\\s*([^\\s;<>]+)\\s*/i, text)\n            || pick(/destinat[áa]rios? ou grupos?:.*?\\b([A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,})\\b/i, text)\n            || pick(/recipients? or groups?:.*?\\b([A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,})\\b/i, text)\n            || pick(/\\bpara\\s+([A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,})\\b/i, text)\n            || pick(/\\bTo:\\s*([A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,})\\b/i, text);\n\n  if (!failed) {\n    const emails = Array.from(text.matchAll(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}/gi)).map(m=>m[0].toLowerCase());\n    const blacklist = [\"microsoftexchange\",\"postmaster\",\"mailer-daemon\",\"no-reply\"];\n    failed = emails.find(e => !blacklist.some(b => e.includes(b)));\n  }\n\n  const status = pick(/Status:\\s*([0-9]\\.[0-9]\\.[0-9])/i, text);\n  let tipo = status?.startsWith(\"5.\") ? \"hard\" : (status?.startsWith(\"4.\") ? \"soft\" : null);\n  if (!tipo) {\n    if (/n[oã]o foi encontrado|user unknown|recipient not found|endere[cç]o para desconhecido|5\\.1\\./i.test(text)) tipo = \"hard\";\n    else if (/mailbox full|over quota|tempor[aá]rio|4\\./i.test(text)) tipo = \"soft\";\n  }\n  const diag = pick(/Diagnostic-Code:\\s*[^\\s;:]+[:;]?\\s*([^\\n\\r]+)/i, text);\n  const motivo = diag || subject || \"Falha de entrega detectada\";\n\n  if (failed) {\n    out.push({ json: {\n      failed_email: failed.toLowerCase(),\n      motivo_bounce: motivo,\n      status_code: status || null,\n      bounce_type: tipo || \"unknown\",\n      message_id: it.json.id || null\n    }});\n  }\n}\nreturn out.length ? out : [];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        528,
+        -112
+      ],
+      "id": "e082a056-1274-4b8e-a99f-9d4055339b74",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1o4uaqXnOxFfS8dBmEtQwVlQFrKpFeZ_z0RWWIxOiuGU",
+          "mode": "list",
+          "cachedResultName": "Lista de Leads - Groudwork",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1o4uaqXnOxFfS8dBmEtQwVlQFrKpFeZ_z0RWWIxOiuGU/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Página1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1o4uaqXnOxFfS8dBmEtQwVlQFrKpFeZ_z0RWWIxOiuGU/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "email": "={{ $json.failed_email }}",
+            "Primeiro Disparo": "erro",
+            "Segundo Disparo": "invalido",
+            "Terceiro Disparo": "invalido",
+            "Quarto Disparo": "invalido",
+            "Quinto Disparo": "invalido",
+            "Sexto Disparo": "invalido"
+          },
+          "matchingColumns": [
+            "email"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Nome completo",
+              "displayName": "Nome completo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Primeiro nome",
+              "displayName": "Primeiro nome",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Segundo/ultimo nome",
+              "displayName": "Segundo/ultimo nome",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "email_tmp",
+              "displayName": "email_tmp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "phone",
+              "displayName": "phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "empresa",
+              "displayName": "empresa",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Cargo/Posição",
+              "displayName": "Cargo/Posição",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Linkedin",
+              "displayName": "Linkedin",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Primeiro Disparo",
+              "displayName": "Primeiro Disparo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Segundo Disparo",
+              "displayName": "Segundo Disparo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Terceiro Disparo",
+              "displayName": "Terceiro Disparo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Quarto Disparo",
+              "displayName": "Quarto Disparo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Quinto Disparo",
+              "displayName": "Quinto Disparo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Sexto Disparo",
+              "displayName": "Sexto Disparo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Respondeu",
+              "displayName": "Respondeu",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Nº de disparos",
+              "displayName": "Nº de disparos",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        784,
+        -112
+      ],
+      "id": "67185f9d-66cd-48b5-89c7-15a54080abd9",
+      "name": "Atualizador de Disparo",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleApi": {
+          "id": "WFfYbnxXdjAidNDj",
+          "name": "Google Sheets account - Service Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "person",
+        "operation": "update",
+        "personId": "={{ $json.id }}",
+        "updateFields": {
+          "customProperties": {
+            "property": [
+              {
+                "name": "f6d5d132e85d511d968d5c26b35c092a5a472d36",
+                "value": "erro"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.pipedrive",
+      "typeVersion": 1,
+      "position": [
+        1264,
+        -112
+      ],
+      "id": "a51b93d0-4bfa-4278-9afb-dd944dcd8c69",
+      "name": "Update a person",
+      "credentials": {
+        "pipedriveApi": {
+          "id": "nctJHdCz6FAP5I2P",
+          "name": "Pipedrive account - Groundwork"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "documentId": {
+          "__rl": true,
+          "value": "1o4uaqXnOxFfS8dBmEtQwVlQFrKpFeZ_z0RWWIxOiuGU",
+          "mode": "list",
+          "cachedResultName": "Lista de Leads - Groudwork",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1o4uaqXnOxFfS8dBmEtQwVlQFrKpFeZ_z0RWWIxOiuGU/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Página1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1o4uaqXnOxFfS8dBmEtQwVlQFrKpFeZ_z0RWWIxOiuGU/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "email",
+              "lookupValue": "={{ $json.email }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1008,
+        -112
+      ],
+      "id": "f83ff312-7def-469b-acbc-b4dceb468863",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleApi": {
+          "id": "WFfYbnxXdjAidNDj",
+          "name": "Google Sheets account - Service Account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Microsoft Outlook Trigger": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Atualizador de Disparo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Atualizador de Disparo": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Update a person",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "982181d9-959e-4ac4-9e82-375e6291a3c3",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "98a7f76cbff973591af08e09b5be2fed14b55b37d878782c0638229a94477203"
+  },
+  "id": "tm1fAwwSpuqS7G88",
+  "tags": []
+}
